@@ -26,6 +26,7 @@ extern seg_es
 extern cs_seg
 extern ccall_ret
 extern seg_to_base
+extern game_in_title
 %endif
 extern cpu
 extern ds_base
@@ -252,6 +253,20 @@ extern bios_int11
 extern bios_int1a
 extern io_in
 extern io_out
+extern cpu_pace
+extern port_hotkeys
+
+; DS offset of the port's extra help line (data.asm), past the original data.
+%define HELP_CTRL_L 0x7140
+
+; CPU_PACE ns: account ns of original 8088 time before the next instruction
+; (see cpu_pace in bios.c). Registers and flags are preserved.
+%macro CPU_PACE 1
+    push rdi
+    mov edi, %1
+    CCALL cpu_pace
+    pop rdi
+%endmacro
 
 ; TRAP cs: an instruction the translator could not handle was reached.
 %macro TRAP 1

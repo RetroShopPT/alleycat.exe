@@ -9,7 +9,6 @@ extern bda_seg
 extern ivt_seg
 extern rom_seg
 extern game_bad_segment
-extern game_park
 extern L_0000
 
 global seg_ds
@@ -20,7 +19,7 @@ global seg_to_base
 global game_main
 global L_13A5
 global L_1419
-global L_5EE5
+global game_in_title
 
 section .bss
 seg_ds:    resw 1
@@ -28,6 +27,7 @@ seg_es:    resw 1
 ccall_ret: resd 1
 exit_rsp:  resq 1
 cs_seg:    resb 0x10000        ; code-segment variables (CS:13DF..13E7)
+game_in_title: resb 1          ; 1 while title_screen (CS:5CB0) runs
 
 section .text
 
@@ -123,10 +123,3 @@ L_13A5:
 
 L_1419:
     ret
-
-; ---------------------------------------------------------------------------
-; CS:5EE5 options_menu - not translated yet: it needs keyboard input and BIOS
-; text output. The game thread parks here; the window keeps showing VRAM.
-
-L_5EE5:
-    CCALL game_park

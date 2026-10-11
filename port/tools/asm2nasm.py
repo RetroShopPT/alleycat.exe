@@ -19,8 +19,38 @@ LINEAR_TO_CS = 0x7230  # "0x1000:xxxx" in the listing is CS:(xxxx - 7230h)
 HAND_WRITTEN = [
     (0x13A5, 0x13A9),  # exit to DOS: restore vectors, POP AX, RETF
     (0x1419, 0x15CF),  # install/restore vectors, INT 9 / INT 48h handlers
-    (0x5EE5, 0x5EE7),  # options_menu entry: parked until keyboard + text output exist
 ]
+
+# CS offset -> nanoseconds of 8088 time to spend before that instruction.
+# Only for loops whose sound depends on CPU speed: they toggle the speaker
+# from software, once per pass. Values are estimated 8088 cycle counts of one
+# pass at 4.77 MHz.
+CPU_PACE_NS = {
+    0x57A6: 75000,  # PWM tone, called once per vretrace poll (loop at CS:3544)
+    0x59EB: 75000,  # noise burst inner loop around INT 1Ah (FUN_59CB)
+}
+
+# CS offset -> lines emitted before that instruction: markers that tell the
+# platform layer where the game is, and the port's changes to the game.
+MARKERS = {
+    # title_screen entry / main after CALL title_screen. Flags not affected.
+    0x5CB0: ['mov byte [game_in_title], 1'],
+    0x0099: ['mov byte [game_in_title], 0'],
+    # handle_hotkeys entry: the port's Ctrl-L (bios.c). Registers and flags kept.
+    0x1338: ['CCALL port_hotkeys'],
+    # options_menu: skip the joystick question and take its "N" path (keyboard
+    # selected, next text line is index 1, the skill prompt).
+    0x5EEB: ['mov word [r12 + 0x6d8f], 0x2',
+             'mov byte [r12 + 0x69b], 0x0',
+             'jmp L_5F1C'],
+    # options_menu, after the "During play:" help lines (text rows 9-13): add
+    # the Ctrl-L line on the free row 14. The string is in data.asm. DX, SI and
+    # the registers L_5E5B/L_5E2B change are reloaded by the code that follows.
+    0x5F5D: ['mov dx, 0x0e00',
+             'call L_5E5B',
+             'mov si, HELP_CTRL_L',
+             'call L_5E2B'],
+}
 
 REG16 = {'AX': 'ax', 'BX': 'bx', 'CX': 'cx', 'DX': 'dx', 'SI': 'si', 'DI': 'di', 'BP': 'bp', 'SP': 'sp'}
 REG8 = {'AL': 'al', 'BL': 'bl', 'CL': 'cl', 'DL': 'dl', 'AH': 'ah', 'BH': 'bh', 'CH': 'ch', 'DH': 'dh'}
@@ -263,6 +293,10 @@ def main():
             body.append('')
             body.append('; ---- %s (CS:%04X)' % (proc_names[cs], cs))
         body.append('L_%04X:' % cs)
+        for ln in MARKERS.get(cs, []):
+            body.append('    ' + ln)
+        if cs in CPU_PACE_NS:
+            body.append('    CPU_PACE %d' % CPU_PACE_NS[cs])
         try:
             lines = translate(mnem, args, jump_tables)
         except Untranslatable as e:

@@ -6,6 +6,7 @@
 #ifndef ALLEYCAT_BIOS_H
 #define ALLEYCAT_BIOS_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define SEGMENT_SIZE 0x10000
@@ -35,17 +36,24 @@ uint8_t bios_cga_color_select(void);
  * while the game thread runs, like a hardware interrupt. */
 void kbd_scancode(uint8_t code);
 
+/* State of the port's Ctrl-L hotkey (both keys held), from the main thread. */
+void kbd_set_add_life(bool down);
+
 /* Called from runtime.inc. */
 void bios_int10(void);
 void bios_int11(void);
 void bios_int1a(void);
 uint32_t io_in(void);
+void cpu_pace(uint32_t ns);
+void port_hotkeys(void);
 void io_out(void);
 
 /* Called from game.asm / runtime.inc; none of them return. */
 _Noreturn void game_trap(uint32_t cs_offset);
 _Noreturn void game_bad_segment(uint32_t segment);
-_Noreturn void game_park(void);
+
+/* 1 while the game runs title_screen (CS:5CB0); set by the generated code. */
+extern volatile uint8_t game_in_title;
 
 /* Entry point of the translated game (game.asm). */
 void game_main(void);

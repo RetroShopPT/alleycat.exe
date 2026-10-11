@@ -2,6 +2,7 @@
  * bios.c - emulated PC hardware and BIOS services (see bios.h).
  */
 #include "bios.h"
+#include "font8x8.h"
 #include "speaker.h"
 
 #include <stdlib.h>
@@ -14,12 +15,18 @@
 #define CGA_VRETRACE_NS 1250000ULL  /* vertical retrace part of each frame */
 #define EQUIPMENT_WORD 0x0021       /* diskette, 80x25 colour adapter */
 #define MODEL_BYTE_PC 0xFF
+#define TEXT_COLS 40                /* 320x200 graphics: 40x25 character cells */
+#define TEXT_ROWS 25
+#define CGA_ODD_BANK 0x2000
+#define CGA_BYTES_PER_ROW 80
 
 /* Keyboard data in the game's data segment (see int09_kbd_isr_pc, CS:14B3). */
 #define KBD_PRESS_COUNT 0x0693      /* word, incremented on every make code */
 #define KBD_SCANCODES 0x06A1        /* 22 scancodes the game cares about */
 #define KBD_STATES 0x06B7           /* state per scancode: 00h down, 80h up */
 #define KBD_KEYS 22
+#define LIVES 0x1F80                /* byte; shown by CS:26B3 when it changes */
+#define MAX_LIVES 9
 
 extern uint8_t ds_base[SEGMENT_SIZE];   /* data.asm */
 
@@ -60,6 +67,7 @@ static void log_once(uint32_t key, const char *what)
 void bios_init(void)
 {
     start_ns = SDL_GetTicksNS();
+    font8x8_init();
     rom_seg[0xFFFE] = MODEL_BYTE_PC;
     bda_seg[0x10] = EQUIPMENT_WORD & 0xFF;
     bda_seg[0x11] = EQUIPMENT_WORD >> 8;
@@ -78,24 +86,116 @@ static uint16_t pit0_count(void)
     return (uint16_t)(0x10000 - ((clocks * 2) & 0xFFFF));
 }
 
-/* The game thread reads these bytes while this (main) thread writes them, as
- * with the original ISR. This thread is the only writer of the counter; a
- * torn read of it only means the game sees the change one poll early. */
+/* The game thread reads these bytes while this (main) thread writes them.
+ * The original ISR ran to completion before the game continued; here the
+ * state byte is written before the counter, so a game loop that sees the
+ * counter change (e.g. the options menu, CS:5F29) also sees the new state.
+ * This thread is the only writer of the counter; a torn read of it only
+ * means the game sees the change one poll early. */
 void kbd_scancode(uint8_t code)
 {
-    if (!(code & 0x80)) {
-        uint16_t n = (uint16_t)(ds_base[KBD_PRESS_COUNT] | ds_base[KBD_PRESS_COUNT + 1] << 8) + 1;
-        __atomic_store_n(&ds_base[KBD_PRESS_COUNT], (uint8_t)n, __ATOMIC_RELEASE);
-        __atomic_store_n(&ds_base[KBD_PRESS_COUNT + 1], (uint8_t)(n >> 8), __ATOMIC_RELEASE);
-    }
     for (int i = 0; i < KBD_KEYS; i++) {
         if (ds_base[KBD_SCANCODES + i] == (code & 0x7F)) {
             __atomic_store_n(&ds_base[KBD_STATES + i], (uint8_t)(code & 0x80), __ATOMIC_RELEASE);
             break;
         }
     }
+    if (!(code & 0x80)) {
+        uint16_t n = (uint16_t)(ds_base[KBD_PRESS_COUNT] | ds_base[KBD_PRESS_COUNT + 1] << 8) + 1;
+        __atomic_store_n(&ds_base[KBD_PRESS_COUNT], (uint8_t)n, __ATOMIC_RELEASE);
+        __atomic_store_n(&ds_base[KBD_PRESS_COUNT + 1], (uint8_t)(n >> 8), __ATOMIC_RELEASE);
+    }
     /* The original also checks Ctrl-Alt-Del (reboot) and Ctrl-Alt-Up/Down
      * (CRTC screen shift) here (CS:1572); neither is emulated. */
+}
+
+static uint8_t *cga_line(int y)
+{
+    return cga_vram + (y & 1) * CGA_ODD_BANK + (y >> 1) * CGA_BYTES_PER_ROW;
+}
+
+/* Draws ch in the cell at the cursor, as the BIOS does in mode 4: set pixels
+ * get color (BL bits 0-1), the rest of the cell is cleared; with BL bit 7 the
+ * glyph is XORed onto the screen instead. */
+static void draw_char(uint8_t ch, uint8_t color)
+{
+    const uint8_t *glyph = font8x8_glyph(ch);
+    for (int r = 0; r < 8; r++) {
+        uint16_t pixels = 0;
+        for (int x = 0; x < 8; x++) {
+            if (glyph[r] & (0x80 >> x))
+                pixels |= (uint16_t)(color & 3) << (14 - 2 * x);
+        }
+        uint8_t *p = cga_line(cursor_row * 8 + r) + cursor_col * 2;
+        if (color & 0x80) {
+            p[0] ^= pixels >> 8;
+            p[1] ^= pixels & 0xFF;
+        } else {
+            p[0] = pixels >> 8;
+            p[1] = pixels & 0xFF;
+        }
+    }
+}
+
+/* Moves the screen up one text row and clears the bottom row. */
+static void scroll_up(void)
+{
+    for (int y = 0; y < (TEXT_ROWS - 1) * 8; y++)
+        memcpy(cga_line(y), cga_line(y + 8), CGA_BYTES_PER_ROW);
+    for (int y = (TEXT_ROWS - 1) * 8; y < TEXT_ROWS * 8; y++)
+        memset(cga_line(y), 0, CGA_BYTES_PER_ROW);
+}
+
+/* INT 10h/0Eh teletype output: AL = character, BL = color. */
+static void teletype(uint8_t ch, uint8_t color)
+{
+    switch (ch) {
+    case 0x07:  /* bell */
+        log_once(0x0E07, "INT 10h/0Eh: bell not emulated");
+        return;
+    case 0x08:
+        if (cursor_col > 0)
+            cursor_col--;
+        return;
+    case 0x0A:
+        cursor_row++;
+        break;
+    case 0x0D:
+        cursor_col = 0;
+        return;
+    default:
+        draw_char(ch, color);
+        if (++cursor_col == TEXT_COLS) {
+            cursor_col = 0;
+            cursor_row++;
+        }
+        break;
+    }
+    if (cursor_row == TEXT_ROWS) {
+        scroll_up();
+        cursor_row = TEXT_ROWS - 1;
+    }
+}
+
+static volatile bool add_life_down;
+
+void kbd_set_add_life(bool down)
+{
+    add_life_down = down;
+}
+
+/* Runs at the start of handle_hotkeys (CS:1338), which the game calls only
+ * during play: one extra life per Ctrl-L press, up to MAX_LIVES. */
+void port_hotkeys(void)
+{
+    static bool applied;
+    if (!add_life_down) {
+        applied = false;
+        return;
+    }
+    if (!applied && ds_base[LIVES] < MAX_LIVES)
+        ds_base[LIVES]++;
+    applied = true;
 }
 
 void bios_int10(void)
@@ -110,8 +210,10 @@ void bios_int10(void)
         cga_color_select = 0x30;
         break;
     case 0x02:  /* set cursor position */
-        cursor_row = cpu.dx >> 8;
-        cursor_col = cpu.dx & 0xFF;
+        if ((cpu.dx >> 8) >= TEXT_ROWS || (cpu.dx & 0xFF) >= TEXT_COLS)
+            log_once(0x0200, "INT 10h/02h: cursor position off screen, clamped");
+        cursor_row = (cpu.dx >> 8) < TEXT_ROWS ? cpu.dx >> 8 : TEXT_ROWS - 1;
+        cursor_col = (cpu.dx & 0xFF) < TEXT_COLS ? cpu.dx & 0xFF : TEXT_COLS - 1;
         break;
     case 0x0B:  /* set colour palette */
         if (bh == 0)
@@ -119,8 +221,8 @@ void bios_int10(void)
         else
             cga_color_select = (cga_color_select & ~0x20) | ((bl & 1) << 5);
         break;
-    case 0x0E:  /* teletype output: needs a font, not implemented yet */
-        log_once(0x0E00, "INT 10h/0Eh text output not implemented; text is not drawn");
+    case 0x0E:  /* teletype output */
+        teletype(al, bl);
         break;
     default:
         log_once(0x1000 | ah, "INT 10h: unsupported function");
@@ -206,6 +308,23 @@ void io_out(void)
     }
 }
 
+/* Emulates the 8088 speed for the code at the CPU_PACE points (asm2nasm.py):
+ * each call takes ns from a virtual CPU clock and busy-waits until real time
+ * catches up, so consecutive calls run at the original rate. After a pause
+ * longer than PACE_RESYNC_NS the clock restarts from now. */
+#define PACE_RESYNC_NS 1000000ULL
+
+void cpu_pace(uint32_t ns)
+{
+    static uint64_t next;
+    uint64_t now = SDL_GetTicksNS();
+    if (next + PACE_RESYNC_NS < now)
+        next = now;
+    next += ns;
+    while (SDL_GetTicksNS() < next)
+        ;
+}
+
 _Noreturn void game_trap(uint32_t cs_offset)
 {
     SDL_Log("game: untranslated instruction reached at CS:%04X", cs_offset);
@@ -216,11 +335,4 @@ _Noreturn void game_bad_segment(uint32_t segment)
 {
     SDL_Log("game: unknown segment value %04X loaded", segment);
     abort();
-}
-
-_Noreturn void game_park(void)
-{
-    SDL_Log("game: options_menu (CS:5EE5) reached; not translated yet, game thread parked");
-    for (;;)
-        SDL_Delay(1000);
 }

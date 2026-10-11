@@ -17,7 +17,7 @@ NFLAGS   := -f macho64 --gprefix _ -Wall -w-reloc-rel-dword -Isrc/
 LDFLAGS  := -arch $(ARCH) -F$(SDL_DIR) -framework SDL3 -Wl,-rpath,@executable_path/../$(SDL_DIR)
 PYTHON   := python3 -I
 
-GAME_OBJS := $(BUILD)/bios.o $(BUILD)/speaker.o $(BUILD)/game.o $(BUILD)/cat_code.o $(BUILD)/data.o
+GAME_OBJS := $(BUILD)/bios.o $(BUILD)/font8x8.o $(BUILD)/speaker.o $(BUILD)/game.o $(BUILD)/cat_code.o $(BUILD)/data.o
 TARGET    := $(BUILD)/alleycat
 CHECK     := $(BUILD)/check_title
 
@@ -36,10 +36,10 @@ $(BUILD)/game.o: src/game.asm src/runtime.inc | $(BUILD)
 	$(NASM) $(NFLAGS) $< -o $@
 
 # data.asm incbins ../CAT.EXE relative to this directory.
-$(BUILD)/data.o: src/data.asm $(EXE) | $(BUILD)
+$(BUILD)/data.o: src/data.asm src/runtime.inc $(EXE) | $(BUILD)
 	$(NASM) $(NFLAGS) $< -o $@
 
-$(BUILD)/%.o: src/%.c src/bios.h src/speaker.h | $(BUILD)
+$(BUILD)/%.o: src/%.c src/bios.h src/font8x8.h src/speaker.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Headless check: generated backdrop code vs. the independent Python model.

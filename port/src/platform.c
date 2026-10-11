@@ -30,8 +30,10 @@ static SDL_AtomicInt game_finished;
  * the same codes as the arrow/navigation block, as on the XT keyboard. */
 static const uint8_t xt_scancode[SDL_SCANCODE_COUNT] = {
     [SDL_SCANCODE_ESCAPE] = 0x01,
-    [SDL_SCANCODE_1] = 0x02, [SDL_SCANCODE_2] = 0x03, [SDL_SCANCODE_3] = 0x04,
-    [SDL_SCANCODE_4] = 0x05, [SDL_SCANCODE_5] = 0x06, [SDL_SCANCODE_6] = 0x07,
+    /* 1-4 are aliases for K H T A, the skill keys of the options menu; the
+     * game reads no other keys there and ignores digits other than 9. */
+    [SDL_SCANCODE_1] = 0x25, [SDL_SCANCODE_2] = 0x23, [SDL_SCANCODE_3] = 0x14,
+    [SDL_SCANCODE_4] = 0x1E, [SDL_SCANCODE_5] = 0x06, [SDL_SCANCODE_6] = 0x07,
     [SDL_SCANCODE_7] = 0x08, [SDL_SCANCODE_8] = 0x09, [SDL_SCANCODE_9] = 0x0A,
     [SDL_SCANCODE_0] = 0x0B, [SDL_SCANCODE_MINUS] = 0x0C, [SDL_SCANCODE_EQUALS] = 0x0D,
     [SDL_SCANCODE_BACKSPACE] = 0x0E, [SDL_SCANCODE_TAB] = 0x0F,
@@ -202,6 +204,8 @@ int main(int argc, char *argv[])
                 if (e.type == SDL_EVENT_KEY_DOWN && is_quit_key(&e.key)) {
                     quit = true;
                 } else if (xt_scancode[e.key.scancode] != 0) {
+                    if (e.key.scancode == SDL_SCANCODE_L)
+                        kbd_set_add_life(e.type == SDL_EVENT_KEY_DOWN && (e.key.mod & SDL_KMOD_CTRL));
                     /* Auto-repeat is passed on, like XT typematic make codes. */
                     kbd_scancode(xt_scancode[e.key.scancode] | (e.type == SDL_EVENT_KEY_UP ? 0x80 : 0));
                 }
