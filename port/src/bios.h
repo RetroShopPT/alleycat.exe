@@ -30,6 +30,11 @@ void bios_init(void);
 /* CGA color select register (port 3D9h) as last set by OUT or INT 10h/0Bh. */
 uint8_t bios_cga_color_select(void);
 
+/* Delivers one XT (set 1) scancode, bit 7 = break, as the game's INT 9
+ * handler at CS:14B3 would see it on port 60h. Called from the main thread
+ * while the game thread runs, like a hardware interrupt. */
+void kbd_scancode(uint8_t code);
+
 /* Called from runtime.inc. */
 void bios_int10(void);
 void bios_int11(void);

@@ -15,6 +15,14 @@
 #define EQUIPMENT_WORD 0x0021       /* diskette, 80x25 colour adapter */
 #define MODEL_BYTE_PC 0xFF
 
+/* Keyboard data in the game's data segment (see int09_kbd_isr_pc, CS:14B3). */
+#define KBD_PRESS_COUNT 0x0693      /* word, incremented on every make code */
+#define KBD_SCANCODES 0x06A1        /* 22 scancodes the game cares about */
+#define KBD_STATES 0x06B7           /* state per scancode: 00h down, 80h up */
+#define KBD_KEYS 22
+
+extern uint8_t ds_base[SEGMENT_SIZE];   /* data.asm */
+
 struct cpu16 cpu;
 uint8_t cga_vram[SEGMENT_SIZE];
 uint8_t bda_seg[SEGMENT_SIZE];
@@ -68,6 +76,26 @@ static uint16_t pit0_count(void)
 {
     uint64_t clocks = elapsed_ns() / 1000 * PIT_HZ / 1000000;
     return (uint16_t)(0x10000 - ((clocks * 2) & 0xFFFF));
+}
+
+/* The game thread reads these bytes while this (main) thread writes them, as
+ * with the original ISR. This thread is the only writer of the counter; a
+ * torn read of it only means the game sees the change one poll early. */
+void kbd_scancode(uint8_t code)
+{
+    if (!(code & 0x80)) {
+        uint16_t n = (uint16_t)(ds_base[KBD_PRESS_COUNT] | ds_base[KBD_PRESS_COUNT + 1] << 8) + 1;
+        __atomic_store_n(&ds_base[KBD_PRESS_COUNT], (uint8_t)n, __ATOMIC_RELEASE);
+        __atomic_store_n(&ds_base[KBD_PRESS_COUNT + 1], (uint8_t)(n >> 8), __ATOMIC_RELEASE);
+    }
+    for (int i = 0; i < KBD_KEYS; i++) {
+        if (ds_base[KBD_SCANCODES + i] == (code & 0x7F)) {
+            __atomic_store_n(&ds_base[KBD_STATES + i], (uint8_t)(code & 0x80), __ATOMIC_RELEASE);
+            break;
+        }
+    }
+    /* The original also checks Ctrl-Alt-Del (reboot) and Ctrl-Alt-Up/Down
+     * (CRTC screen shift) here (CS:1572); neither is emulated. */
 }
 
 void bios_int10(void)
