@@ -1,0 +1,9 @@
+.DS_Store
+*.exe
+
+re/*.txt
+re/*.asm
+
+port/build/
+port/third_party/
+
