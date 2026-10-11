@@ -1,0 +1,48 @@
+/*
+ * bios.h - emulated PC hardware and BIOS services for the translated game:
+ * memory segments, INT 10h/11h/1Ah, port I/O (PIT, speaker gate, CGA,
+ * joystick). No window code; usable headless.
+ */
+#ifndef ALLEYCAT_BIOS_H
+#define ALLEYCAT_BIOS_H
+
+#include <stdint.h>
+
+#define SEGMENT_SIZE 0x10000
+
+/* Register image exchanged with runtime.inc (BIOS / PORT_* macros).
+ * Field offsets are fixed: CPU_AX = 0 ... CPU_PORT = 14. */
+struct cpu16 {
+    uint16_t ax, bx, cx, dx, si, di, bp, port;
+};
+
+extern struct cpu16 cpu;
+
+/* Emulated segments: B800h (CGA), 0040h (BIOS data), 0000h (vectors),
+ * F000h (ROM; only the model byte at FFFEh matters). */
+extern uint8_t cga_vram[SEGMENT_SIZE];
+extern uint8_t bda_seg[SEGMENT_SIZE];
+extern uint8_t ivt_seg[SEGMENT_SIZE];
+extern uint8_t rom_seg[SEGMENT_SIZE];
+
+void bios_init(void);
+
+/* CGA color select register (port 3D9h) as last set by OUT or INT 10h/0Bh. */
+uint8_t bios_cga_color_select(void);
+
+/* Called from runtime.inc. */
+void bios_int10(void);
+void bios_int11(void);
+void bios_int1a(void);
+uint32_t io_in(void);
+void io_out(void);
+
+/* Called from game.asm / runtime.inc; none of them return. */
+_Noreturn void game_trap(uint32_t cs_offset);
+_Noreturn void game_bad_segment(uint32_t segment);
+_Noreturn void game_park(void);
+
+/* Entry point of the translated game (game.asm). */
+void game_main(void);
+
+#endif
