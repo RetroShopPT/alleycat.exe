@@ -157,6 +157,17 @@ static void present(void)
     SDL_RenderPresent(renderer);
 }
 
+/* F10, Ctrl-W and Ctrl-Q quit everywhere; Esc only on the title screen,
+ * elsewhere it reaches the game, which pauses ("paws mode"). */
+static bool is_quit_key(const SDL_KeyboardEvent *k)
+{
+    if (k->scancode == SDL_SCANCODE_F10)
+        return true;
+    if ((k->mod & SDL_KMOD_CTRL) && (k->key == SDLK_W || k->key == SDLK_Q))
+        return true;
+    return k->scancode == SDL_SCANCODE_ESCAPE && game_in_title;
+}
+
 static int game_thread(void *unused)
 {
     (void)unused;
@@ -188,8 +199,7 @@ int main(int argc, char *argv[])
             if (e.type == SDL_EVENT_QUIT) {
                 quit = true;
             } else if (e.type == SDL_EVENT_KEY_DOWN || e.type == SDL_EVENT_KEY_UP) {
-                /* Esc quits the port; in the original it paused the game. */
-                if (e.key.scancode == SDL_SCANCODE_ESCAPE) {
+                if (e.type == SDL_EVENT_KEY_DOWN && is_quit_key(&e.key)) {
                     quit = true;
                 } else if (xt_scancode[e.key.scancode] != 0) {
                     /* Auto-repeat is passed on, like XT typematic make codes. */
