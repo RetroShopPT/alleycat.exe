@@ -1,6 +1,6 @@
 # Alley Cat (port)
 
-A port of *Alley Cat* (Bill Williams, SynSoft/IBM, 1984) from its original DOS executable to x86_64 platforms. The game was written in hand-coded 8088 assembly. This project disassembles `CAT.EXE`, translates the 16-bit code into x86-64 assembly, and runs it on emulated PC hardware with SDL3 handling video and sound.
+A port of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)) (Bill Williams, SynSoft/IBM, 1984) from its original DOS executable to `x86_64` platforms. The game was written in hand-coded 8088 assembly. This project disassembles `CAT.EXE`, translates the 16-bit code into x86-64 assembly, and runs it on emulated PC hardware with SDL3 handling video and sound.
 
 > [!IMPORTANT]
 > 99.99% LLM-generated code. I have rougly reviewed the output the agent produced, but if you have your concerns about AI, you should abstain from using this project.
@@ -18,12 +18,14 @@ Todo:
 - The options menu. The game stops there when the title tune ends, after about 46 seconds.
 - BIOS text output, which needs an 8x8 font.
 - Two sound effects that toggle the speaker in software. They depend on 8088 speed and probably sound wrong.
+- Linux build
+- Windows build
 
 ## Requirements
 
-- macOS with Rosetta 2. The port is an x86_64 binary. Linux build pending is Todo.
-- Xcode command line tools (clang, make).
-- nasm (`brew install nasm`).
+- macOS with Rosetta 2. The port is an x86_64 binary.
+- Xcode command line tools (clang, make)
+- nasm (`brew install nasm`)
 - Python 3. It is used at build time to generate the translated code.
 - SDL3, as the official macOS release framework (3.4.x, universal). Copy `SDL3.framework` to `port/third_party/SDL3.framework`.
 - The original `CAT.EXE`, in the repository root. The build reads the game data directly from it. `CAT.EXE` and the disassembly derived from it are copyrighted by their original owners.
@@ -32,18 +34,18 @@ Todo:
 
 From `port/`:
 
-- `make` builds `build/alleycat`.
-- `make run` builds and starts the game.
+- `make` builds `build/alleycat`
+- `make run` builds and starts the game
 - `make check` is a headless test. It runs the translated title backdrop code with a fixed random seed and compares the resulting screen memory with an independent Python model (`tools/ref_title.py`).
 - `make smoke` is a headless test. It runs the game without a window for a few seconds and writes the screen memory to `build/vram_smoke.bin`. Set the duration with `SMOKE_SECONDS=20`. Convert the dump to an image with `tools/vram2ppm.py`.
-- `make clean` removes `build/`.
+- `make clean` removes `build/`
 
 Messages about unsupported BIOS calls or I/O ports are printed once each to the terminal.
 
 ## Layout
 
 - `re/` holds the reverse-engineering material.
-  - `re/CAT.asm` is the Ghidra listing of the code segment. This file is not included.
+  - `re/CAT.asm` is the Ghidra listing of the code segment. `<NOT INCLDUED>`
   - `re/DumpListing.java` is the Ghidra script that produces it.
   - `re/NOTES.md` covers the memory layout, subsystems, key table, hotkeys and open questions.
 - `port/tools/asm2nasm.py` translates `re/CAT.asm` into `port/build/cat_code.asm`. Every original instruction gets a label `L_xxxx` after its code-segment offset.
