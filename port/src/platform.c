@@ -9,6 +9,7 @@
  * audio thread (speaker.c).
  */
 #include "bios.h"
+#include "font8x8.h"
 #include "speaker.h"
 
 #include <SDL3/SDL.h>
@@ -133,6 +134,20 @@ static void platform_shutdown(void)
     SDL_Quit();
 }
 
+/* Draws text into pixels with the BIOS font; overlay only, cga_vram is untouched. */
+static void draw_text(int x, int y, const char *s, uint32_t color)
+{
+    for (; *s != '\0'; s++, x += 8) {
+        const uint8_t *g = font8x8_glyph((uint8_t)*s);
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                if (g[r] & (0x80 >> c))
+                    pixels[(y + r) * CGA_WIDTH + x + c] = color;
+            }
+        }
+    }
+}
+
 /* Converts cga_vram (320x200, 2 bpp, interlaced) to RGB and shows it. */
 static void present(void)
 {
@@ -150,6 +165,10 @@ static void present(void)
             out[3] = pal[b & 3];
             out += 4;
         }
+    }
+    if (game_in_title) {
+        static const char version[] = "v" ALLEYCAT_VERSION;
+        draw_text(CGA_WIDTH - 8 * ((int)sizeof version - 1), CGA_HEIGHT - 8, version, pal[3]);
     }
 
     SDL_UpdateTexture(texture, NULL, pixels, CGA_WIDTH * sizeof(uint32_t));

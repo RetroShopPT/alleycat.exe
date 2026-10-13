@@ -8,6 +8,7 @@ LISTING  := ../re/CAT.asm
 EXE      := ../CAT.EXE
 NASM     := nasm
 PYTHON   := python3 -I
+VER      := 1.0
 
 ifeq ($(shell uname -s),Linux)
 
@@ -53,6 +54,10 @@ $(BUILD)/data.o: src/data.asm src/runtime.inc $(EXE) | $(BUILD)
 
 $(BUILD)/%.o: src/%.c src/bios.h src/font8x8.h src/speaker.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# The version is shown on the title screen; rebuild when VER changes.
+$(BUILD)/platform.o: CFLAGS += -DALLEYCAT_VERSION='"$(VER)"'
+$(BUILD)/platform.o: Makefile
 
 # Headless check: generated backdrop code vs. the independent Python model.
 $(BUILD)/check_main.o: tests/check_main.c src/bios.h | $(BUILD)
