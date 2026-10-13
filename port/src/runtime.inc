@@ -20,6 +20,11 @@
 
 default rel
 
+%ifidn __OUTPUT_FORMAT__, elf64
+section .note.GNU-stack noalloc noexec nowrite progbits   ; non-executable stack
+section .text
+%endif
+
 %ifndef RUNTIME_DEFINES_STATE
 extern seg_ds
 extern seg_es
@@ -29,7 +34,9 @@ extern seg_to_base
 extern game_in_title
 %endif
 extern cpu
+%ifndef RUNTIME_DEFINES_DS
 extern ds_base
+%endif
 extern cga_vram
 extern game_trap
 

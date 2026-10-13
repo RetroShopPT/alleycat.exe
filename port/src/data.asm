@@ -3,6 +3,7 @@
 ; Bytes are taken verbatim from the EXE, so every DS offset in re/CAT.asm
 ; addresses the same byte here: [0690h] becomes [r12 + 0690h].
 
+%define RUNTIME_DEFINES_DS
 %include "runtime.inc"
 
 section .data
