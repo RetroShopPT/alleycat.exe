@@ -41,7 +41,8 @@ CFLAGS   := -arch $(ARCH) -std=c11 -O2 -Wall -Wextra -F$(SDL_DIR) -Isrc
 # Mach-O C symbols carry a leading underscore; --gprefix adds it to asm globals/externs.
 # RIP-relative references across sections are normal on Mach-O, so that warning is off.
 NFLAGS   := -f macho64 --gprefix _ -Wall -w-reloc-rel-dword -Isrc/
-LDFLAGS  := -arch $(ARCH) -F$(SDL_DIR) -framework SDL3 -Wl,-rpath,@executable_path/../$(SDL_DIR)
+LDFLAGS  := -arch $(ARCH) -F$(SDL_DIR) -framework SDL3 -Wl,-rpath,@executable_path/../$(SDL_DIR) \
+            -Wl,-rpath,@executable_path
 
 endif
 
@@ -139,6 +140,36 @@ windows-image:
 windows: windows-image
 	docker run --rm -v "$(abspath ..)":/src -w /src/port $(WINDOWS_IMAGE) make TARGET_OS=Windows BUILD=build/windows all
 
+# Release archives in build/: the macOS build (always) plus the Linux and
+# Windows builds if they exist (make linux / make windows first). Each holds
+# one top-level directory named like the archive. Run on macOS.
+PACK_NAME := alleycat-$(VER)
+PACK_DIR  := $(BUILD)/pack
+
+pack: $(TARGET)
+	rm -rf $(PACK_DIR)
+	mkdir -p $(PACK_DIR)/$(PACK_NAME)-macos-x86_64
+	cp $(TARGET) $(PACK_DIR)/$(PACK_NAME)-macos-x86_64/
+	cp -R $(SDL_DIR)/SDL3.framework $(PACK_DIR)/$(PACK_NAME)-macos-x86_64/
+	rm -f $(BUILD)/$(PACK_NAME)-macos-x86_64.zip
+	cd $(PACK_DIR) && zip -qry ../$(PACK_NAME)-macos-x86_64.zip $(PACK_NAME)-macos-x86_64
+	@echo "pack: $(BUILD)/$(PACK_NAME)-macos-x86_64.zip"
+	@if [ -f $(BUILD)/linux/alleycat ]; then \
+		mkdir -p $(PACK_DIR)/$(PACK_NAME)-linux-x86_64 && \
+		cp $(BUILD)/linux/alleycat $(PACK_DIR)/$(PACK_NAME)-linux-x86_64/ && \
+		COPYFILE_DISABLE=1 tar -czf $(BUILD)/$(PACK_NAME)-linux-x86_64.tar.gz --uid 0 --gid 0 \
+			-C $(PACK_DIR) $(PACK_NAME)-linux-x86_64 && \
+		echo "pack: $(BUILD)/$(PACK_NAME)-linux-x86_64.tar.gz"; \
+	fi
+	@if [ -f $(BUILD)/windows/alleycat.exe ]; then \
+		mkdir -p $(PACK_DIR)/$(PACK_NAME)-windows-x86_64 && \
+		cp $(BUILD)/windows/alleycat.exe $(BUILD)/windows/SDL3.dll $(PACK_DIR)/$(PACK_NAME)-windows-x86_64/ && \
+		rm -f $(BUILD)/$(PACK_NAME)-windows-x86_64.zip && \
+		(cd $(PACK_DIR) && zip -qr ../$(PACK_NAME)-windows-x86_64.zip $(PACK_NAME)-windows-x86_64) && \
+		echo "pack: $(BUILD)/$(PACK_NAME)-windows-x86_64.zip"; \
+	fi
+	rm -rf $(PACK_DIR)
+
 $(BUILD):
 	mkdir -p $@
 
@@ -146,11 +177,6 @@ run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	-@test -d $(BUILD)/linux && rm -f $(BUILD)/linux/*
-	-@test -d $(BUILD)/linux && rmdir $(BUILD)/linux
-	-@test -d $(BUILD)/windows && rm -f $(BUILD)/windows/*
-	-@test -d $(BUILD)/windows && rmdir $(BUILD)/windows
-	@-rm -f $(BUILD)/*
-	@-rmdir $(BUILD)
+	@-rm -rf $(BUILD)/
 
-.PHONY: all run check smoke clean linux-image linux linux-check windows-image windows
+.PHONY: all run check smoke clean linux-image linux linux-check windows-image windows pack
