@@ -48,8 +48,8 @@ seg_to_base:
     je .ivt
     cmp r14d, 0xf000
     je .rom
-    mov edi, r14d
-    and rsp, -16
+    mov ARG1D, r14d
+    C_STACK
     call game_bad_segment
 .data:
     lea r14, [ds_base]
@@ -84,6 +84,7 @@ game_main:
     push r13
     push r14
     push r15
+    PUSH_WIN64_NONVOL
     mov [exit_rsp], rsp
     xor eax, eax
     xor ebx, ebx
@@ -101,6 +102,7 @@ game_main:
 
 game_exit:
     mov rsp, [exit_rsp]
+    POP_WIN64_NONVOL
     pop r15
     pop r14
     pop r13

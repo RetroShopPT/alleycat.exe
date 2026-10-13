@@ -25,6 +25,42 @@ section .note.GNU-stack noalloc noexec nowrite progbits   ; non-executable stack
 section .text
 %endif
 
+; C calling convention: first integer argument register, and the shadow space
+; a Windows x64 caller reserves above the return address for the callee.
+%ifidn __OUTPUT_FORMAT__, win64
+%define ARG1  rcx
+%define ARG1D ecx
+%define SHADOW_SPACE 32
+%else
+%define ARG1  rdi
+%define ARG1D edi
+%define SHADOW_SPACE 0
+%endif
+
+; C_STACK: 16-byte align rsp (and reserve the shadow space) for a C call.
+%macro C_STACK 0
+    and rsp, -16
+%if SHADOW_SPACE
+    sub rsp, SHADOW_SPACE
+%endif
+%endmacro
+
+; Windows x64 also preserves rsi and rdi across calls; entry points called
+; from C save them around the translated code.
+%macro PUSH_WIN64_NONVOL 0
+%ifidn __OUTPUT_FORMAT__, win64
+    push rsi
+    push rdi
+%endif
+%endmacro
+
+%macro POP_WIN64_NONVOL 0
+%ifidn __OUTPUT_FORMAT__, win64
+    pop rdi
+    pop rsi
+%endif
+%endmacro
+
 %ifndef RUNTIME_DEFINES_STATE
 extern seg_ds
 extern seg_es
@@ -189,7 +225,7 @@ extern game_trap
     push rdi
     push rbp
     mov rbp, rsp
-    and rsp, -16
+    C_STACK
     cld
     call %1
     mov [ccall_ret], eax
@@ -269,15 +305,15 @@ extern port_hotkeys
 ; CPU_PACE ns: account ns of original 8088 time before the next instruction
 ; (see cpu_pace in bios.c). Registers and flags are preserved.
 %macro CPU_PACE 1
-    push rdi
-    mov edi, %1
+    push ARG1
+    mov ARG1D, %1
     CCALL cpu_pace
-    pop rdi
+    pop ARG1
 %endmacro
 
 ; TRAP cs: an instruction the translator could not handle was reached.
 %macro TRAP 1
-    mov edi, %1
-    and rsp, -16
+    mov ARG1D, %1
+    C_STACK
     call game_trap
 %endmacro

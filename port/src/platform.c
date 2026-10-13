@@ -13,6 +13,7 @@
 #include "speaker.h"
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>  /* WinMain on Windows; no effect on macOS and Linux */
 
 #define CGA_WIDTH 320
 #define CGA_HEIGHT 200

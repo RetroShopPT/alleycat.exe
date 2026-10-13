@@ -18,6 +18,7 @@ check_title:
     push r13
     push r14
     push r15
+    PUSH_WIN64_NONVOL
     xor eax, eax
     xor ebx, ebx
     xor ecx, ecx
@@ -61,6 +62,7 @@ check_title:
     mov di, 0x1dec
     call L_2D9D
 
+    POP_WIN64_NONVOL
     pop r15
     pop r14
     pop r13
