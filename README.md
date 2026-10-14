@@ -4,12 +4,23 @@
 [![platforms-windows-mac-linux](https://img.shields.io/badge/platforms-windows,%20mac,%20linux-blue)](https://github.com/petarov/alleycat.exe/releases/latest)
 [![license-unlicense](https://img.shields.io/badge/license-Unlicense-green)](https://github.com/petarov/alleycat.exe/blob/main/LICENSE)
 
-A port of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)) (Bill Williams, SynSoft/IBM, 1984) from its original DOS executable to `x86_64` platforms. The game was written in hand-coded 8088 assembly. This project disassembles `CAT.EXE`, translates the 16-bit code into x86-64 assembly, and runs it on emulated PC hardware with SDL3 handling video and sound.
+A port of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)) (Bill Williams, SynSoft/IBM, 1984) from its original DOS executable to `x86_64` platforms.
 
 > [!IMPORTANT]
 > 99% LLM-generated code. I have rougly reviewed the output the agent produced, but if you have your concerns about AI, you should abstain from using this project.
 
 ![Alley Cat Title Screen](screenshots/title-screen.png)
+
+## Platforms and downloads
+
+| Platform | Latest release | Package to choose |
+|---|---|---|
+| Windows x64 | [1.1](https://github.com/petarov/alleycat.exe/releases/tag/1.1) | `windows-x86_64` ZIP |
+| Linux x64 | [1.1](https://github.com/petarov/alleycat.exe/releases/tag/1.1) | `linux-x86_64` archive |
+| macOS Intel (x64) | [1.1](https://github.com/petarov/alleycat.exe/releases/tag/1.1) | `macos-x86_64` ZIP |
+| macOS Apple Silicon (ARM64) | [1.1](https://github.com/petarov/alleycat.exe/releases/tag/1.1) | `macos-x86_64` ZIP — runs under Rosetta 2 |
+
+The macOS build is not signed or notarized: allow it under *Privacy & Security* or run `xattr -dr com.apple.quarantine <folder>`.
 
 ## Controls
 

@@ -4,6 +4,7 @@
 
 All platforms:
 
+- The game was written in hand-coded 8088 assembly. This project disassembles `CAT.EXE`, translates the 16-bit code into x86-64 assembly, and runs it on emulated PC hardware with SDL2 handling video and sound.
 - The original `CAT.EXE`, in the repository root. The build reads the game data directly from it, and every binary embeds it, so no game files are needed at run time. `CAT.EXE` and the disassembly derived from it are copyrighted by their original owners.
 - `re/CAT.asm`, the Ghidra listing (see [Regenerating the listing](#regenerating-the-listing)).
 
@@ -84,4 +85,3 @@ analyzeHeadless /tmp/ghidra-proj cat -import CAT.EXE -scriptPath re \
 ```
 
 The script corrects the operand order of `MOV Sreg,r/m` instructions, which Ghidra prints reversed. It also marks the keyboard interrupt handlers and the room dispatch targets as code, because Ghidra does not find them on its own.
-
