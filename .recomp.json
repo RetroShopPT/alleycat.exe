@@ -1,6 +1,7 @@
 {
   "$schema": "https://recomp.fyi/schema/v1.json",
   "game": "Alley Cat",
+  "wikidata": "Q1851926",
   "system": "PC (DOS)",
   "type": "recomp",
   "original": { "revision": "1984", "sha1": "77d7b7a613d4fa3e707f3c90d368032745a8405a" },
