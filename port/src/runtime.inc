@@ -298,6 +298,7 @@ extern io_in
 extern io_out
 extern cpu_pace
 extern port_hotkeys
+extern infinite_lives
 
 ; DS offset of the port's extra help line (data.asm), past the original data.
 %define HELP_CTRL_L 0x7140

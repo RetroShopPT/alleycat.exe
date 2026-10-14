@@ -232,6 +232,8 @@ int main(int argc, char *argv[])
                 } else if (xt_scancode[sc] != 0) {
                     if (sc == SDL_SCANCODE_L)
                         kbd_set_add_life(e.type == SDL_KEYDOWN && (e.key.keysym.mod & KMOD_CTRL));
+                    if (sc == SDL_SCANCODE_K)
+                        kbd_set_infinite_lives(e.type == SDL_KEYDOWN && (e.key.keysym.mod & KMOD_CTRL));
                     /* Auto-repeat is passed on, like XT typematic make codes. */
                     kbd_scancode(xt_scancode[sc] | (e.type == SDL_KEYUP ? 0x80 : 0));
                 }

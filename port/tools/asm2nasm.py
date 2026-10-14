@@ -38,6 +38,13 @@ MARKERS = {
     0x0099: ['mov byte [game_in_title], 0'],
     # handle_hotkeys entry: the port's Ctrl-L (bios.c). Registers and flags kept.
     0x1338: ['CCALL port_hotkeys'],
+    # The port's Ctrl-K infinite lives keeps [1F80h] at 0 (bios.c), so the
+    # "no lives left" checks take their "lives left" path while it is on.
+    # The flags at each target match the original path (ZF=0, CF=0).
+    0x00F3: ['cmp byte [infinite_lives], 0', 'jne L_00FA'],
+    0x0155: ['cmp byte [infinite_lives], 0', 'jne L_015F'],
+    0x01AD: ['cmp byte [infinite_lives], 0', 'jne L_01B7'],
+    0x1DB8: ['cmp byte [infinite_lives], 0', 'jne L_1DBF'],
     # options_menu: skip the joystick question and take its "N" path (keyboard
     # selected, next text line is index 1, the skill prompt).
     0x5EEB: ['mov word [r12 + 0x6d8f], 0x2',

@@ -24,6 +24,7 @@ A port of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)) (Bill W
 
  - `F10`, `Ctrl-W` and `Ctrl-Q`: quits at any time
  - `Ctrl-L`: adds a life, up to `9`
+ - `Ctrl-K`: infinite lives (counter gets set to 0)
 
 ## Building
 

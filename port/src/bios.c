@@ -185,24 +185,52 @@ static void teletype(uint8_t ch, uint8_t color)
 }
 
 static volatile bool add_life_down;
+static volatile bool infinite_lives_down;
+
+/* 1 while Ctrl-K infinite lives is on: the lives counter is held at 0 (shown
+ * as the "unkillable" marker) and the generated code skips its game-over
+ * checks. Game thread only. */
+uint8_t infinite_lives;
 
 void kbd_set_add_life(bool down)
 {
     add_life_down = down;
 }
 
+void kbd_set_infinite_lives(bool down)
+{
+    infinite_lives_down = down;
+}
+
 /* Runs at the start of handle_hotkeys (CS:1338), which the game calls only
- * during play: one extra life per Ctrl-L press, up to MAX_LIVES. */
+ * during play: one extra life per Ctrl-L press, up to MAX_LIVES, and
+ * Ctrl-K toggles infinite lives. Turning them off restores the count. */
 void port_hotkeys(void)
 {
-    static bool applied;
-    if (!add_life_down) {
-        applied = false;
-        return;
+    static bool add_applied, toggle_applied;
+    static uint8_t saved_lives;
+    if (!infinite_lives_down) {
+        toggle_applied = false;
+    } else if (!toggle_applied) {
+        if (infinite_lives) {
+            infinite_lives = 0;
+            ds_base[LIVES] = saved_lives;
+        } else {
+            infinite_lives = 1;
+            saved_lives = ds_base[LIVES];
+        }
+        toggle_applied = true;
     }
-    if (!applied && ds_base[LIVES] < MAX_LIVES)
-        ds_base[LIVES]++;
-    applied = true;
+    if (!add_life_down) {
+        add_applied = false;
+    } else if (!add_applied) {
+        if (!infinite_lives && ds_base[LIVES] < MAX_LIVES)
+            ds_base[LIVES]++;
+        add_applied = true;
+    }
+    /* Held at 0 every frame: also undoes bonus lives, Ctrl-9 and a restart. */
+    if (infinite_lives)
+        ds_base[LIVES] = 0;
 }
 
 void bios_int10(void)

@@ -41,6 +41,8 @@ void kbd_scancode(uint8_t code);
 
 /* State of the port's Ctrl-L hotkey (both keys held), from the main thread. */
 void kbd_set_add_life(bool down);
+/* Same for Ctrl-K (toggles infinite lives). */
+void kbd_set_infinite_lives(bool down);
 
 /* Called from runtime.inc. */
 void bios_int10(void);
