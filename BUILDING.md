@@ -12,12 +12,12 @@ macOS (native build, x86_64, runs under Rosetta 2 on Apple Silicon):
 - Xcode command line tools (clang, make, zip)
 - nasm (`brew install nasm`)
 - Python 3. It is used at build time to generate the translated code.
-- SDL3, as the official macOS release framework (3.4.x, universal). Copy `SDL3.framework` to `port/third_party/SDL3.framework`.
+- SDL2, as the official macOS release framework (2.32.x, universal). Copy `SDL2.framework` to `port/third_party/SDL2.framework`. If macOS refuses to load it ("library load disallowed by system policy"), remove the download quarantine: `xattr -dr com.apple.quarantine port/third_party/SDL2.framework`.
 - Docker Desktop, only for the Linux and Windows builds from macOS (`make linux`, `make windows`).
 
 Linux (native build, x86_64 host):
 
-- make, gcc, nasm, python3, pkg-config and the SDL3 development package. On Debian 13 / Ubuntu: `sudo apt install make gcc nasm python3 pkg-config libsdl3-dev`.
+- make, gcc, nasm, python3, pkg-config and the SDL2 development package. On Debian / Ubuntu / Linux Mint: `sudo apt install make gcc nasm python3 pkg-config libsdl2-dev`.
 
 ## Building and running
 
@@ -27,7 +27,7 @@ From `port/`:
 - `make run` builds and starts the game
 - `make check` is a headless test. It runs the translated title backdrop code with a fixed random seed and compares the resulting screen memory with an independent Python model (`tools/ref_title.py`).
 - `make smoke` is a headless test. It runs the game without a window for a few seconds and writes the screen memory to `build/vram_smoke.bin`. Set the duration with `SMOKE_SECONDS=20`. Convert the dump to an image with `tools/vram2ppm.py`.
-- `make clean` removes `build/`
+- `make clean` removes `build/`. Run it after changing the SDL version: the objects do not depend on the SDL headers.
 
 Messages about unsupported BIOS calls or I/O ports are printed once each to the terminal (not on Windows, which has no console window).
 
@@ -37,17 +37,17 @@ The version shown on the title screen is `VER` in `port/Makefile`.
 
 Both run in Docker. Each target builds its toolchain image once (a few minutes) and reuses it afterwards.
 
-- `make linux` builds `build/linux/alleycat` in an emulated x86_64 Debian 13 container. The binary needs glibc and SDL3 (`libsdl3-0`) of Debian 13 or newer on the target system.
+- `make linux` builds `build/linux/alleycat` in an emulated x86_64 Debian 13 container. The binary needs glibc 2.34 or newer and SDL2 (`libsdl2-2.0-0`) on the target system, e.g. Debian 12+, Ubuntu 22.04+, Linux Mint 21+.
 - `make linux-check` also runs `check` and `smoke` in that container.
-- `make windows` cross-compiles `build/windows/alleycat.exe` with mingw-w64 and copies `SDL3.dll` next to it. The image downloads the official SDL3 mingw release (`SDL_VERSION` in the Makefile). Copy both files to the Windows machine.
+- `make windows` cross-compiles `build/windows/alleycat.exe` with mingw-w64 and copies `SDL2.dll` next to it. The image downloads the official SDL2 mingw release (`SDL_VERSION` in the Makefile). Copy both files to the Windows machine.
 
 ### Release archives
 
 `make pack` (macOS) builds the macOS binary and writes to `build/`:
 
-- `alleycat-<VER>-macos-x86_64.zip`: `alleycat` and `SDL3.framework`
+- `alleycat-<VER>-macos-x86_64.zip`: `alleycat` and `SDL2.framework`
 - `alleycat-<VER>-linux-x86_64.tar.gz`: `alleycat`, if `build/linux/alleycat` exists
-- `alleycat-<VER>-windows-x86_64.zip`: `alleycat.exe` and `SDL3.dll`, if `build/windows/alleycat.exe` exists
+- `alleycat-<VER>-windows-x86_64.zip`: `alleycat.exe` and `SDL2.dll`, if `build/windows/alleycat.exe` exists
 
 `pack` does not rebuild the Linux and Windows binaries; run `make linux` and `make windows` first. The macOS binary is not signed or notarized, so a downloaded copy needs `xattr -dr com.apple.quarantine <folder>` or approval under Privacy & Security.
 
@@ -63,8 +63,8 @@ Both run in Docker. Each target builds its toolchain image once (a few minutes) 
 - `port/src/data.asm` includes the original data segment straight from `CAT.EXE`, so data offsets match the listing. All game text, including the menu strings, comes from there. Text added by the port is stored past the end of the original data.
 - `port/src/bios.c` emulates the hardware: the BIOS services (INT 10h, 11h, 1Ah), the timer chip, the CGA registers, the speaker ports, the keyboard and the memory segments.
 - `port/src/font8x8.c` is the 8x8 font for BIOS text output, drawn for this port in CGA style.
-- `port/src/speaker.c` emulates the PC speaker on an SDL audio stream.
-- `port/src/platform.c` is the SDL front end: the window, display of the CGA screen (with the version overlay on the title screen), keyboard events and the game thread.
+- `port/src/speaker.c` emulates the PC speaker on an SDL2 audio device.
+- `port/src/platform.c` is the SDL2 front end: the window, display of the CGA screen (with the version overlay on the title screen), keyboard events and the game thread.
 - `port/tests/` holds the headless test programs used by `make check` and `make smoke`.
 
 ## How it works

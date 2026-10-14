@@ -1,6 +1,6 @@
 /*
  * speaker.h - PC speaker emulation: PIT channel 2 square wave gated by port
- * 61h, rendered through an SDL3 audio stream.
+ * 61h, rendered through an SDL2 audio device.
  *
  * The game thread reports every change of the speaker state with a
  * timestamp; the audio thread replays those changes a fixed latency behind

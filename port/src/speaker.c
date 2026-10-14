@@ -8,13 +8,15 @@
  * A DC-blocking filter turns the resulting 0/1 levels into audio.
  */
 #include "speaker.h"
+#include "bios.h"
 
 #include <stdatomic.h>
 
-#include <SDL3/SDL.h>
+#include <SDL2/SDL.h>
 
 #define PIT_HZ 1193182.0
 #define SAMPLE_RATE 48000
+#define BUFFER_FRAMES 512
 #define OVERSAMPLE 8
 #define LATENCY_NS 40000000ULL      /* replay this far behind real time */
 #define RESYNC_NS 150000000ULL      /* larger drift: jump to real time */
@@ -35,7 +37,7 @@ static atomic_uint ring_tail;
 static atomic_bool ring_overflow;
 static atomic_uint latest_state;     /* port61 | reload << 8, for resync */
 
-static SDL_AudioStream *stream;
+static SDL_AudioDeviceID device;
 
 /* Audio thread state. */
 static uint64_t render_ns;
@@ -61,7 +63,7 @@ void speaker_set(uint8_t port61, uint16_t pit2_reload)
         atomic_store_explicit(&ring_overflow, true, memory_order_release);
         return;
     }
-    ring[head % RING_SIZE] = (struct speaker_event){ SDL_GetTicksNS(), pit2_reload, port61 };
+    ring[head % RING_SIZE] = (struct speaker_event){ host_ns(), pit2_reload, port61 };
     atomic_store_explicit(&ring_head, head + 1, memory_order_release);
 }
 
@@ -124,38 +126,36 @@ static float next_sample(void)
     return out * VOLUME;
 }
 
-static void SDLCALL audio_callback(void *userdata, SDL_AudioStream *s, int additional_amount, int total_amount)
+static void SDLCALL audio_callback(void *userdata, Uint8 *out, int len)
 {
     (void)userdata;
-    (void)total_amount;
-    float buf[512];
-    int samples = additional_amount / (int)sizeof(float);
-    resync(SDL_GetTicksNS());
-    while (samples > 0) {
-        int n = samples < 512 ? samples : 512;
-        for (int i = 0; i < n; i++)
-            buf[i] = next_sample();
-        SDL_PutAudioStreamData(s, buf, n * (int)sizeof(float));
-        samples -= n;
-    }
+    float *buf = (float *)out;
+    int samples = len / (int)sizeof(float);
+    resync(host_ns());
+    for (int i = 0; i < samples; i++)
+        buf[i] = next_sample();
 }
 
+/* Mono float at SAMPLE_RATE; SDL converts if the device wants another format. */
 bool speaker_init(void)
 {
-    const SDL_AudioSpec spec = { SDL_AUDIO_F32, 1, SAMPLE_RATE };
-    stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, audio_callback, NULL);
-    if (stream == NULL) {
-        SDL_Log("SDL_OpenAudioDeviceStream failed: %s", SDL_GetError());
+    SDL_AudioSpec want = { 0 };
+    want.freq = SAMPLE_RATE;
+    want.format = AUDIO_F32SYS;
+    want.channels = 1;
+    want.samples = BUFFER_FRAMES;
+    want.callback = audio_callback;
+    device = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
+    if (device == 0) {
+        SDL_Log("SDL_OpenAudioDevice failed: %s", SDL_GetError());
         return false;
     }
-    if (!SDL_ResumeAudioStreamDevice(stream)) {
-        SDL_Log("SDL_ResumeAudioStreamDevice failed: %s", SDL_GetError());
-        return false;
-    }
+    SDL_PauseAudioDevice(device, 0);
     return true;
 }
 
 void speaker_shutdown(void)
 {
-    SDL_DestroyAudioStream(stream);
+    if (device != 0)
+        SDL_CloseAudioDevice(device);
 }

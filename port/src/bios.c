@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <SDL3/SDL.h>
+#include <SDL2/SDL.h>
 
 #define PIT_HZ 1193182ULL
 #define CGA_FRAME_NS 16683333ULL    /* 59.94 Hz */
@@ -45,9 +45,16 @@ static uint16_t pit0_latch;
 static int pit0_latched_bytes;      /* bytes of the latch still to be read */
 static uint8_t cursor_row, cursor_col;
 
+uint64_t host_ns(void)
+{
+    uint64_t freq = SDL_GetPerformanceFrequency();
+    uint64_t c = SDL_GetPerformanceCounter();
+    return c / freq * 1000000000ULL + c % freq * 1000000000ULL / freq;
+}
+
 static uint64_t elapsed_ns(void)
 {
-    return SDL_GetTicksNS() - start_ns;
+    return host_ns() - start_ns;
 }
 
 /* Logs an unsupported request once per key. */
@@ -66,7 +73,7 @@ static void log_once(uint32_t key, const char *what)
 
 void bios_init(void)
 {
-    start_ns = SDL_GetTicksNS();
+    start_ns = host_ns();
     font8x8_init();
     rom_seg[0xFFFE] = MODEL_BYTE_PC;
     bda_seg[0x10] = EQUIPMENT_WORD & 0xFF;
@@ -317,11 +324,11 @@ void io_out(void)
 void cpu_pace(uint32_t ns)
 {
     static uint64_t next;
-    uint64_t now = SDL_GetTicksNS();
+    uint64_t now = host_ns();
     if (next + PACE_RESYNC_NS < now)
         next = now;
     next += ns;
-    while (SDL_GetTicksNS() < next)
+    while (host_ns() < next)
         ;
 }
 

@@ -8,15 +8,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <SDL3/SDL.h>
+#include <SDL2/SDL.h>
 
-static SDL_AtomicInt game_finished;
+static SDL_atomic_t game_finished;
 
 static int game_thread(void *unused)
 {
     (void)unused;
     game_main();
-    SDL_SetAtomicInt(&game_finished, 1);
+    SDL_AtomicSet(&game_finished, 1);
     return 0;
 }
 
@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     }
     SDL_DetachThread(thread);
     SDL_Delay((Uint32)atoi(argv[2]) * 1000);
-    if (SDL_GetAtomicInt(&game_finished)) {
+    if (SDL_AtomicGet(&game_finished)) {
         fprintf(stderr, "smoke: game thread ended early\n");
         return 1;
     }

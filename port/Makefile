@@ -1,8 +1,8 @@
 # Alley Cat port: CAT.EXE code translated to x86-64 (generated from the Ghidra
-# listing re/CAT.asm) + emulated BIOS/hardware + SDL3 front end.
+# listing re/CAT.asm) + emulated BIOS/hardware + SDL2 front end.
 # Builds an x86_64 binary: on macOS it runs under Rosetta 2 on Apple Silicon,
-# on Linux it needs an x86_64 host and the system SDL3 (pkg-config sdl3),
-# on Windows SDL3.dll next to alleycat.exe.
+# on Linux it needs an x86_64 host and the system SDL2 (pkg-config sdl2),
+# on Windows SDL2.dll next to alleycat.exe.
 
 BUILD    := build
 LISTING  := ../re/CAT.asm
@@ -16,21 +16,21 @@ TARGET_OS ?= $(shell uname -s)
 
 ifeq ($(TARGET_OS),Windows)
 
-SDL_MINGW ?= /opt/SDL3/x86_64-w64-mingw32
+SDL_MINGW ?= /opt/SDL2/x86_64-w64-mingw32
 CC       := x86_64-w64-mingw32-gcc
 CFLAGS   := -std=c11 -O2 -Wall -Wextra -Isrc -I$(SDL_MINGW)/include
 NFLAGS   := -f win64 -Wall -w-reloc-rel-dword -Isrc/
-LDFLAGS  := -L$(SDL_MINGW)/lib -lSDL3 -static-libgcc
-# The game is a GUI program (no console window); SDL_main.h supplies WinMain.
+LDFLAGS  := -L$(SDL_MINGW)/lib -lmingw32 -lSDL2main -lSDL2 -static-libgcc
+# The game is a GUI program (no console window); SDL2main supplies WinMain.
 GUI_LDFLAGS := -mwindows
 EXE_SUFFIX  := .exe
 
 else ifeq ($(TARGET_OS),Linux)
 
 CC       := cc
-CFLAGS   := -std=c11 -O2 -Wall -Wextra -Isrc $(shell pkg-config --cflags sdl3)
+CFLAGS   := -std=c11 -O2 -Wall -Wextra -Isrc $(shell pkg-config --cflags sdl2)
 NFLAGS   := -f elf64 -Wall -w-reloc-rel-dword -Isrc/
-LDFLAGS  := $(shell pkg-config --libs sdl3)
+LDFLAGS  := $(shell pkg-config --libs sdl2)
 
 else
 
@@ -41,7 +41,7 @@ CFLAGS   := -arch $(ARCH) -std=c11 -O2 -Wall -Wextra -F$(SDL_DIR) -Isrc
 # Mach-O C symbols carry a leading underscore; --gprefix adds it to asm globals/externs.
 # RIP-relative references across sections are normal on Mach-O, so that warning is off.
 NFLAGS   := -f macho64 --gprefix _ -Wall -w-reloc-rel-dword -Isrc/
-LDFLAGS  := -arch $(ARCH) -F$(SDL_DIR) -framework SDL3 -Wl,-rpath,@executable_path/../$(SDL_DIR) \
+LDFLAGS  := -arch $(ARCH) -F$(SDL_DIR) -framework SDL2 -Wl,-rpath,@executable_path/../$(SDL_DIR) \
             -Wl,-rpath,@executable_path
 
 endif
@@ -51,9 +51,9 @@ TARGET    := $(BUILD)/alleycat$(EXE_SUFFIX)
 CHECK     := $(BUILD)/check_title
 
 ifeq ($(TARGET_OS),Windows)
-all: $(TARGET) $(BUILD)/SDL3.dll
+all: $(TARGET) $(BUILD)/SDL2.dll
 
-$(BUILD)/SDL3.dll: $(SDL_MINGW)/bin/SDL3.dll | $(BUILD)
+$(BUILD)/SDL2.dll: $(SDL_MINGW)/bin/SDL2.dll | $(BUILD)
 	cp $< $@
 else
 all: $(TARGET)
@@ -115,11 +115,11 @@ LINUX_BASE  ?= debian:trixie
 LINUX_IMAGE := alleycat-linux-build
 
 linux-image:
-	printf 'FROM $(LINUX_BASE)\nRUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq make gcc nasm python3 pkg-config libsdl3-dev >/dev/null\n' \
+	printf 'FROM $(LINUX_BASE)\nRUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq make gcc nasm python3 pkg-config libsdl2-dev >/dev/null\n' \
 		| docker build --platform linux/amd64 -t $(LINUX_IMAGE) -
 
 LINUX_RUN = docker run --rm --platform linux/amd64 -v "$(abspath ..)":/src -w /src/port \
-	-e SDL_VIDEO_DRIVER=dummy -e SDL_AUDIO_DRIVER=dummy $(LINUX_IMAGE) make BUILD=build/linux
+	-e SDL_VIDEODRIVER=dummy -e SDL_AUDIODRIVER=dummy $(LINUX_IMAGE) make BUILD=build/linux
 
 linux: linux-image
 	$(LINUX_RUN) all
@@ -127,14 +127,14 @@ linux: linux-image
 linux-check: linux-image
 	$(LINUX_RUN) all check smoke
 
-# Windows x86_64 cross build with mingw-w64 and the official SDL3 mingw release.
+# Windows x86_64 cross build with mingw-w64 and the official SDL2 mingw release.
 # The compiler runs natively in the container; only its output is x86_64.
-# Result: build/windows/alleycat.exe + SDL3.dll (copy both to the Windows box).
-SDL_VERSION   := 3.4.18
+# Result: build/windows/alleycat.exe + SDL2.dll (copy both to the Windows box).
+SDL_VERSION   := 2.32.10
 WINDOWS_IMAGE := alleycat-windows-build
 
 windows-image:
-	printf 'FROM $(LINUX_BASE)\nRUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq make gcc-mingw-w64-x86-64 nasm python3 curl ca-certificates >/dev/null\nRUN curl -fsSL https://github.com/libsdl-org/SDL/releases/download/release-$(SDL_VERSION)/SDL3-devel-$(SDL_VERSION)-mingw.tar.gz | tar -xz -C /opt && mv /opt/SDL3-$(SDL_VERSION) /opt/SDL3\n' \
+	printf 'FROM $(LINUX_BASE)\nRUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq make gcc-mingw-w64-x86-64 nasm python3 curl ca-certificates >/dev/null\nRUN curl -fsSL https://github.com/libsdl-org/SDL/releases/download/release-$(SDL_VERSION)/SDL2-devel-$(SDL_VERSION)-mingw.tar.gz | tar -xz -C /opt && mv /opt/SDL2-$(SDL_VERSION) /opt/SDL2\n' \
 		| docker build -t $(WINDOWS_IMAGE) -
 
 windows: windows-image
@@ -150,7 +150,7 @@ pack: $(TARGET)
 	rm -rf $(PACK_DIR)
 	mkdir -p $(PACK_DIR)/$(PACK_NAME)-macos-x86_64
 	cp $(TARGET) $(PACK_DIR)/$(PACK_NAME)-macos-x86_64/
-	cp -R $(SDL_DIR)/SDL3.framework $(PACK_DIR)/$(PACK_NAME)-macos-x86_64/
+	cp -R $(SDL_DIR)/SDL2.framework $(PACK_DIR)/$(PACK_NAME)-macos-x86_64/
 	rm -f $(BUILD)/$(PACK_NAME)-macos-x86_64.zip
 	cd $(PACK_DIR) && zip -qry ../$(PACK_NAME)-macos-x86_64.zip $(PACK_NAME)-macos-x86_64
 	@echo "pack: $(BUILD)/$(PACK_NAME)-macos-x86_64.zip"
@@ -163,7 +163,7 @@ pack: $(TARGET)
 	fi
 	@if [ -f $(BUILD)/windows/alleycat.exe ]; then \
 		mkdir -p $(PACK_DIR)/$(PACK_NAME)-windows-x86_64 && \
-		cp $(BUILD)/windows/alleycat.exe $(BUILD)/windows/SDL3.dll $(PACK_DIR)/$(PACK_NAME)-windows-x86_64/ && \
+		cp $(BUILD)/windows/alleycat.exe $(BUILD)/windows/SDL2.dll $(PACK_DIR)/$(PACK_NAME)-windows-x86_64/ && \
 		rm -f $(BUILD)/$(PACK_NAME)-windows-x86_64.zip && \
 		(cd $(PACK_DIR) && zip -qr ../$(PACK_NAME)-windows-x86_64.zip $(PACK_NAME)-windows-x86_64) && \
 		echo "pack: $(BUILD)/$(PACK_NAME)-windows-x86_64.zip"; \

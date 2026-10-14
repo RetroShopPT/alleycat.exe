@@ -28,6 +28,9 @@ extern uint8_t rom_seg[SEGMENT_SIZE];
 
 void bios_init(void);
 
+/* Host monotonic clock in ns (any thread). */
+uint64_t host_ns(void);
+
 /* CGA color select register (port 3D9h) as last set by OUT or INT 10h/0Bh. */
 uint8_t bios_cga_color_select(void);
 

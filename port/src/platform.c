@@ -1,5 +1,5 @@
 /*
- * platform.c - SDL3 front end: window, presenting the emulated CGA screen,
+ * platform.c - SDL2 front end: window, presenting the emulated CGA screen,
  * events, and the game thread.
  *
  * The translated game runs on its own thread, like the original program on
@@ -12,8 +12,7 @@
 #include "font8x8.h"
 #include "speaker.h"
 
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>  /* WinMain on Windows; no effect on macOS and Linux */
+#include <SDL2/SDL.h>
 
 #define CGA_WIDTH 320
 #define CGA_HEIGHT 200
@@ -25,12 +24,12 @@ static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
 static uint32_t pixels[CGA_WIDTH * CGA_HEIGHT];
-static SDL_AtomicInt game_finished;
+static SDL_atomic_t game_finished;
 
 /* SDL (USB HID) scancode -> XT set 1 scancode; 0 = no XT equivalent. Keys are
  * mapped by position, as the original reads raw scancodes. The keypad gives
  * the same codes as the arrow/navigation block, as on the XT keyboard. */
-static const uint8_t xt_scancode[SDL_SCANCODE_COUNT] = {
+static const uint8_t xt_scancode[SDL_NUM_SCANCODES] = {
     [SDL_SCANCODE_ESCAPE] = 0x01,
     /* 1-4 are aliases for K H T A, the skill keys of the options menu; the
      * game reads no other keys there and ignores digits other than 9. */
@@ -99,28 +98,34 @@ static void build_palette(uint32_t out[4])
 
 static bool platform_init(void)
 {
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
         SDL_Log("SDL_Init failed: %s", SDL_GetError());
         return false;
     }
-    if (!SDL_CreateWindowAndRenderer("Alley Cat", CGA_WIDTH * WINDOW_SCALE, CGA_HEIGHT * WINDOW_SCALE,
-                                     SDL_WINDOW_RESIZABLE, &window, &renderer)) {
-        SDL_Log("SDL_CreateWindowAndRenderer failed: %s", SDL_GetError());
+    window = SDL_CreateWindow("Alley Cat", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                              CGA_WIDTH * WINDOW_SCALE, CGA_HEIGHT * WINDOW_SCALE, SDL_WINDOW_RESIZABLE);
+    if (window == NULL) {
+        SDL_Log("SDL_CreateWindow failed: %s", SDL_GetError());
         return false;
     }
-    if (!SDL_SetRenderLogicalPresentation(renderer, CGA_WIDTH, CGA_HEIGHT,
-                                          SDL_LOGICAL_PRESENTATION_INTEGER_SCALE)) {
-        SDL_Log("SDL_SetRenderLogicalPresentation failed: %s", SDL_GetError());
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
+    if (renderer == NULL) {
+        SDL_Log("SDL_CreateRenderer failed: %s", SDL_GetError());
         return false;
     }
-    SDL_SetRenderVSync(renderer, 1);
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING,
+    if (SDL_RenderSetLogicalSize(renderer, CGA_WIDTH, CGA_HEIGHT) != 0 ||
+        SDL_RenderSetIntegerScale(renderer, SDL_TRUE) != 0) {
+        SDL_Log("SDL_RenderSetLogicalSize failed: %s", SDL_GetError());
+        return false;
+    }
+    /* SDL_PIXELFORMAT_RGB888 is SDL2's name for XRGB8888. */
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING,
                                 CGA_WIDTH, CGA_HEIGHT);
     if (texture == NULL) {
         SDL_Log("SDL_CreateTexture failed: %s", SDL_GetError());
         return false;
     }
-    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+    SDL_SetTextureScaleMode(texture, SDL_ScaleModeNearest);
     if (!speaker_init())
         SDL_Log("continuing without sound");
     return true;
@@ -175,7 +180,7 @@ static void present(void)
     SDL_UpdateTexture(texture, NULL, pixels, CGA_WIDTH * sizeof(uint32_t));
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
-    SDL_RenderTexture(renderer, texture, NULL, NULL);
+    SDL_RenderCopy(renderer, texture, NULL, NULL);
     SDL_RenderPresent(renderer);
 }
 
@@ -183,18 +188,18 @@ static void present(void)
  * elsewhere it reaches the game, which pauses ("paws mode"). */
 static bool is_quit_key(const SDL_KeyboardEvent *k)
 {
-    if (k->scancode == SDL_SCANCODE_F10)
+    if (k->keysym.scancode == SDL_SCANCODE_F10)
         return true;
-    if ((k->mod & SDL_KMOD_CTRL) && (k->key == SDLK_W || k->key == SDLK_Q))
+    if ((k->keysym.mod & KMOD_CTRL) && (k->keysym.sym == SDLK_w || k->keysym.sym == SDLK_q))
         return true;
-    return k->scancode == SDL_SCANCODE_ESCAPE && game_in_title;
+    return k->keysym.scancode == SDL_SCANCODE_ESCAPE && game_in_title;
 }
 
 static int game_thread(void *unused)
 {
     (void)unused;
     game_main();
-    SDL_SetAtomicInt(&game_finished, 1);
+    SDL_AtomicSet(&game_finished, 1);
     return 0;
 }
 
@@ -215,19 +220,20 @@ int main(int argc, char *argv[])
     SDL_DetachThread(thread);
 
     bool quit = false;
-    while (!quit && !SDL_GetAtomicInt(&game_finished)) {
+    while (!quit && !SDL_AtomicGet(&game_finished)) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_EVENT_QUIT) {
+            if (e.type == SDL_QUIT) {
                 quit = true;
-            } else if (e.type == SDL_EVENT_KEY_DOWN || e.type == SDL_EVENT_KEY_UP) {
-                if (e.type == SDL_EVENT_KEY_DOWN && is_quit_key(&e.key)) {
+            } else if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) {
+                SDL_Scancode sc = e.key.keysym.scancode;
+                if (e.type == SDL_KEYDOWN && is_quit_key(&e.key)) {
                     quit = true;
-                } else if (xt_scancode[e.key.scancode] != 0) {
-                    if (e.key.scancode == SDL_SCANCODE_L)
-                        kbd_set_add_life(e.type == SDL_EVENT_KEY_DOWN && (e.key.mod & SDL_KMOD_CTRL));
+                } else if (xt_scancode[sc] != 0) {
+                    if (sc == SDL_SCANCODE_L)
+                        kbd_set_add_life(e.type == SDL_KEYDOWN && (e.key.keysym.mod & KMOD_CTRL));
                     /* Auto-repeat is passed on, like XT typematic make codes. */
-                    kbd_scancode(xt_scancode[e.key.scancode] | (e.type == SDL_EVENT_KEY_UP ? 0x80 : 0));
+                    kbd_scancode(xt_scancode[sc] | (e.type == SDL_KEYUP ? 0x80 : 0));
                 }
             }
         }
