@@ -56,6 +56,8 @@ void bios_int1a(void);
 uint32_t io_in(void);
 void cpu_pace(uint32_t ns);
 void port_hotkeys(void);
+/* Called from the game's wait-for-key loops: sleeps 1 ms. */
+void port_idle(void);
 void io_out(void);
 
 /* Called from game.asm / runtime.inc; none of them return. */

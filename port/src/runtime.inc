@@ -298,6 +298,7 @@ extern io_in
 extern io_out
 extern cpu_pace
 extern port_hotkeys
+extern port_idle
 extern infinite_lives
 extern invincible
 

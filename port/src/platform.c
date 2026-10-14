@@ -196,9 +196,13 @@ static void draw_text(int x, int y, const char *s, uint32_t color)
     }
 }
 
-/* Converts cga_vram (320x200, 2 bpp, interlaced) to RGB and shows it. */
-static void present(void)
+/* Converts cga_vram (320x200, 2 bpp, interlaced) to RGB and shows it. A
+ * frame identical to the last one shown is skipped unless force is set (window
+ * events), so a static screen costs almost nothing, e.g. over remote desktop. */
+static void present(bool force)
 {
+    static uint32_t shown[CGA_WIDTH * CGA_HEIGHT];
+
     uint32_t pal[4];
     build_palette(pal);
 
@@ -218,6 +222,10 @@ static void present(void)
         static const char version[] = "v" ALLEYCAT_VERSION;
         draw_text(CGA_WIDTH - 8 * ((int)sizeof version - 1), CGA_HEIGHT - 8, version, pal[3]);
     }
+
+    if (!force && SDL_memcmp(shown, pixels, sizeof shown) == 0)
+        return;
+    SDL_memcpy(shown, pixels, sizeof shown);
 
     SDL_UpdateTexture(texture, NULL, pixels, CGA_WIDTH * sizeof(uint32_t));
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -267,11 +275,17 @@ int main(int argc, char *argv[])
     SDL_DetachThread(thread);
 
     bool quit = false;
+    bool force = true;
+    const Uint64 freq = SDL_GetPerformanceFrequency();
+    const Uint64 frame = freq / 60;
+    Uint64 next_frame = SDL_GetPerformanceCounter();
     while (!quit && !SDL_AtomicGet(&game_finished)) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quit = true;
+            } else if (e.type == SDL_WINDOWEVENT || e.type == SDL_RENDER_TARGETS_RESET) {
+                force = true;
             } else if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) {
                 SDL_Scancode sc = e.key.keysym.scancode;
                 if (e.type == SDL_KEYDOWN && is_quit_key(&e.key)) {
@@ -287,13 +301,23 @@ int main(int argc, char *argv[])
                         (e.key.keysym.mod & KMOD_CTRL)) {
                         pcjr_colors = !pcjr_colors;
                         save_pcjr_colors();
+                        force = true;
                     }
                     /* Auto-repeat is passed on, like XT typematic make codes. */
                     kbd_scancode(xt_scancode[sc] | (e.type == SDL_KEYUP ? 0x80 : 0));
                 }
             }
         }
-        present();  /* paced by vsync */
+        present(force);
+        force = false;
+        /* At most 60 frames per second: vsync does not always wait (e.g. over
+         * xrdp or VNC), and the loop would then spin and redraw nonstop. */
+        next_frame += frame;
+        Uint64 now = SDL_GetPerformanceCounter();
+        if (now < next_frame)
+            SDL_Delay((Uint32)((next_frame - now) * 1000 / freq));
+        else if (now - next_frame > frame)
+            next_frame = now;   /* fell behind (e.g. window dragged): resync */
     }
     /* The game thread may still be running (it busy-waits like the original);
      * returning from main ends the process. */

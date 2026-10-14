@@ -303,13 +303,61 @@ void bios_int11(void)
 }
 
 /* INT 1Ah/00h: ticks since start at 18.2065 Hz in CX:DX, AL = 0 (no midnight). */
+/* Set by speaker port writes (42h, 43h, 61h); cleared by INT 1Ah. Game thread. */
+static bool speaker_io;
+
+static uint64_t ticks_at(uint64_t ns)
+{
+    return ns / 1000 * PIT_HZ / 65536 / 1000000;
+}
+
+/* The game waits for the next tick by polling INT 1Ah in a loop, as the
+ * original did, which keeps a host core busy. After IDLE_AFTER_POLLS polls of
+ * the same tick with no speaker writes in between (those loops make sound),
+ * sleep, but wake 2 ms before the next tick and before the next vertical
+ * retrace, so the game still sees every tick and every retrace it polls for.
+ * The poll count matters: the alley loop (CS:0155) runs the music and most of
+ * its logic only on every 4th pass and calls INT 1Ah several times per pass,
+ * so it needs many passes per tick, as on the 8088; sleeping on the first
+ * repeated poll made the music choppy. */
+#define IDLE_MARGIN_NS 2000000ULL
+#define IDLE_AFTER_POLLS 500
+
+static void idle_sleep(uint64_t now, uint64_t ticks)
+{
+    uint64_t next_tick = ((ticks + 1) * 65536 * 1000000000ULL + PIT_HZ - 1) / PIT_HZ;
+    uint64_t gap = next_tick - now;
+    uint64_t phase = now % CGA_FRAME_NS;
+    uint64_t to_retrace = phase < CGA_VRETRACE_NS ? 0 : CGA_FRAME_NS - phase;
+    if (to_retrace < gap)
+        gap = to_retrace;
+    if (gap > IDLE_MARGIN_NS + 1000000ULL)
+        SDL_Delay((Uint32)((gap - IDLE_MARGIN_NS) / 1000000ULL));
+}
+
+void port_idle(void)
+{
+    SDL_Delay(1);
+}
+
 void bios_int1a(void)
 {
+    static uint64_t last_ticks = UINT64_MAX;
+    static unsigned same_tick_polls;
     if (cpu.ax >> 8 != 0) {
         log_once(0x1A00 | (cpu.ax >> 8), "INT 1Ah: unsupported function");
         return;
     }
-    uint64_t ticks = elapsed_ns() / 1000 * PIT_HZ / 65536 / 1000000;
+    uint64_t now = elapsed_ns();
+    uint64_t ticks = ticks_at(now);
+    if (ticks != last_ticks) {
+        same_tick_polls = 0;
+    } else if (!speaker_io && ++same_tick_polls >= IDLE_AFTER_POLLS) {
+        idle_sleep(now, ticks);
+        ticks = ticks_at(elapsed_ns());
+    }
+    last_ticks = ticks;
+    speaker_io = false;
     cpu.cx = (uint16_t)(ticks >> 16);
     cpu.dx = (uint16_t)ticks;
     cpu.ax &= 0xFF00;
@@ -341,6 +389,7 @@ void io_out(void)
     uint8_t al = cpu.ax & 0xFF;
     switch (cpu.port) {
     case 0x43:
+        speaker_io = true;
         if ((al & 0xF0) == 0x00) {          /* latch channel 0 */
             pit0_latch = pit0_count();
             pit0_latched_bytes = 2;
@@ -351,6 +400,7 @@ void io_out(void)
         }
         break;
     case 0x42:
+        speaker_io = true;
         if (pit2_write_high) {
             pit2_reload = (pit2_reload & 0x00FF) | al << 8;
             speaker_set(port61, pit2_reload);   /* new count is complete */
@@ -360,6 +410,7 @@ void io_out(void)
         pit2_write_high = !pit2_write_high;
         break;
     case 0x61:  /* bit 0 = PIT channel 2 gate, bit 1 = speaker data */
+        speaker_io = true;
         port61 = al;
         speaker_set(port61, pit2_reload);
         break;

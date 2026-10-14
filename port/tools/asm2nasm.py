@@ -38,6 +38,14 @@ MARKERS = {
     0x0099: ['mov byte [game_in_title], 0'],
     # handle_hotkeys entry: the port's Ctrl-L (bios.c). Registers and flags kept.
     0x1338: ['CCALL port_hotkeys'],
+    # Loops that only wait for a key (keypress counter [0693h] to change):
+    # sleep 1 ms per pass instead of spinning a host core. Registers and flags
+    # kept. Joystick question, skill menu, "Press any key" / Esc pause, text
+    # screen at CS:5FF6.
+    0x5EF7: ['CCALL port_idle'],
+    0x5F29: ['CCALL port_idle'],
+    0x5FAA: ['CCALL port_idle'],
+    0x6007: ['CCALL port_idle'],
     # The port's Ctrl-K infinite lives keeps [1F80h] at 0 (bios.c), so the
     # "no lives left" checks take their "lives left" path while it is on.
     # The flags at each target match the original path (ZF=0, CF=0).
