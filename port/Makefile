@@ -9,7 +9,7 @@ LISTING  := ../re/CAT.asm
 EXE      := ../CAT.EXE
 NASM     := nasm
 PYTHON   := python3 -I
-VER      := 1.1
+VER      := 1.2
 
 # Windows is cross-compiled with mingw-w64 (make windows, in Docker).
 TARGET_OS ?= $(shell uname -s)

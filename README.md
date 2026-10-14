@@ -1,6 +1,6 @@
 # Alley Cat (x86-64 port)
 
-[![version](https://img.shields.io/badge/release-1.1-orange)](https://github.com/petarov/alleycat.exe/releases/latest)
+[![version](https://img.shields.io/badge/release-1.2-orange)](https://github.com/petarov/alleycat.exe/releases/latest)
 [![platforms-windows-mac-linux](https://img.shields.io/badge/platforms-windows,%20mac,%20linux-blue)](https://github.com/petarov/alleycat.exe/releases/latest)
 [![license-unlicense](https://img.shields.io/badge/license-Unlicense-green)](https://github.com/petarov/alleycat.exe/blob/main/LICENSE)
 
@@ -17,10 +17,10 @@ A port of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)) (Bill W
 
 | Platform | Latest release | Package to choose |
 |---|---|---|
-| Windows x64 | [1.1](https://github.com/petarov/alleycat.exe/releases/tag/1.1) | `windows-x86_64` ZIP |
-| Linux x64 | [1.1](https://github.com/petarov/alleycat.exe/releases/tag/1.1) | `linux-x86_64` archive |
-| macOS Intel (x64) | [1.1](https://github.com/petarov/alleycat.exe/releases/tag/1.1) | `macos-x86_64` ZIP |
-| macOS Apple Silicon (ARM64) | [1.1](https://github.com/petarov/alleycat.exe/releases/tag/1.1) | `macos-x86_64` ZIP — runs under Rosetta 2 |
+| Windows x64 | [1.2](https://github.com/petarov/alleycat.exe/releases/latest) | `windows-x86_64` ZIP |
+| Linux x64 | [1.2](https://github.com/petarov/alleycat.exe/releases/latest) | `linux-x86_64` archive |
+| macOS Intel (x64) | [1.2](https://github.com/petarov/alleycat.exe/releases/latest) | `macos-x86_64` ZIP |
+| macOS Apple Silicon (ARM64) | [1.2](https://github.com/petarov/alleycat.exe/releases/latest) | `macos-x86_64` ZIP — runs under Rosetta 2 |
 
 The macOS build is not signed or notarized: allow it under *Privacy & Security* or run `xattr -dr com.apple.quarantine <folder>`.
 
