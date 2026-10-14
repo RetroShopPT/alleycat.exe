@@ -14,4 +14,6 @@ ds_base:
     ; DS:7130 and up are not used by the game; the port's additions go here.
     times HELP_CTRL_L - ($ - ds_base) db 0
     db "   Ctrl-L  adds a life (up to 9).", 0
+    times HELP_CTRL_I - ($ - ds_base) db 0
+    db "   Ctrl-I  toggles invincibility.", 0
     times 0x10000 - ($ - ds_base) db 0      ; pad to a full 64 KB segment

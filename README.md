@@ -24,11 +24,14 @@ The macOS build is not signed or notarized: allow it under *Privacy & Security* 
 
 ## Controls
 
-- Cursor keys move the cat. `Alt` performs special actions.
 - In the options menu, `K`, `H`, `T` and `A` (or 1 to 4) choose the skill level. The skill sets the starting difficulty; the game raises it as you complete levels.
-- `Ctrl-S`: turns the sound on and off.
-- `Ctrl-R`: restarts the game.
-- `Ctrl-M`: returns to the options menu.
+- Use the cursor keys to move the cat and jump.
+- `Alt` (PC) or `Option` (MacOS) performs special actions:
+  - **Room 6** (milk bowls, sleeping dogs): hold it next to a bowl to drink from it. A full bowl takes several sips, and the room has 12 bowls.
+  - **Room 7** (hearts cat room): drops a picked-up gift on the nearest shelf at the cat's position. A rival cat that walks into a gift takes it and stays away for a while. Each completed room adds one gift, up to 8.
+- `Ctrl-S`: turns the sound on and off
+- `Ctrl-R`: restarts the game
+- `Ctrl-M`: returns to the options menu
 - `Esc`: pauses the game whie playing; quits the game on the title screen.
 
 ### New (not in the original game):
@@ -36,6 +39,7 @@ The macOS build is not signed or notarized: allow it under *Privacy & Security* 
  - `F10`, `Ctrl-W` and `Ctrl-Q`: quits at any time
  - `Ctrl-L`: adds a life, up to `9`
  - `Ctrl-K`: infinite lives (counter gets set to 0)
+ - `Ctrl-I`: invincibility against the dog, the cat head in the garbage cans and the rival cats in the hearts cat room; nothing is thrown from the windows
 
 ## Building
 

@@ -186,11 +186,17 @@ static void teletype(uint8_t ch, uint8_t color)
 
 static volatile bool add_life_down;
 static volatile bool infinite_lives_down;
+static volatile bool invincible_down;
 
 /* 1 while Ctrl-K infinite lives is on: the lives counter is held at 0 (shown
  * as the "unkillable" marker) and the generated code skips its game-over
  * checks. Game thread only. */
 uint8_t infinite_lives;
+
+/* 1 while Ctrl-I invincibility is on: the generated code skips the dog's
+ * catch test and the knock-downs by the rival cats and the garbage can cat head, and nothing
+ * is thrown from the windows. Game thread only. */
+uint8_t invincible;
 
 void kbd_set_add_life(bool down)
 {
@@ -202,12 +208,18 @@ void kbd_set_infinite_lives(bool down)
     infinite_lives_down = down;
 }
 
+void kbd_set_invincible(bool down)
+{
+    invincible_down = down;
+}
+
 /* Runs at the start of handle_hotkeys (CS:1338), which the game calls only
  * during play: one extra life per Ctrl-L press, up to MAX_LIVES, and
- * Ctrl-K toggles infinite lives. Turning them off restores the count. */
+ * Ctrl-K toggles infinite lives. Turning them off restores the count.
+ * Ctrl-I toggles invincibility. */
 void port_hotkeys(void)
 {
-    static bool add_applied, toggle_applied;
+    static bool add_applied, toggle_applied, invincible_applied;
     static uint8_t saved_lives;
     if (!infinite_lives_down) {
         toggle_applied = false;
@@ -227,6 +239,12 @@ void port_hotkeys(void)
         if (!infinite_lives && ds_base[LIVES] < MAX_LIVES)
             ds_base[LIVES]++;
         add_applied = true;
+    }
+    if (!invincible_down) {
+        invincible_applied = false;
+    } else if (!invincible_applied) {
+        invincible ^= 1;
+        invincible_applied = true;
     }
     /* Held at 0 every frame: also undoes bonus lives, Ctrl-9 and a restart. */
     if (infinite_lives)

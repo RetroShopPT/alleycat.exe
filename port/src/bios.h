@@ -43,6 +43,8 @@ void kbd_scancode(uint8_t code);
 void kbd_set_add_life(bool down);
 /* Same for Ctrl-K (toggles infinite lives). */
 void kbd_set_infinite_lives(bool down);
+/* Same for Ctrl-I (toggles invincibility). */
+void kbd_set_invincible(bool down);
 
 /* Called from runtime.inc. */
 void bios_int10(void);

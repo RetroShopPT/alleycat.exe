@@ -45,18 +45,41 @@ MARKERS = {
     0x0155: ['cmp byte [infinite_lives], 0', 'jne L_015F'],
     0x01AD: ['cmp byte [infinite_lives], 0', 'jne L_01B7'],
     0x1DB8: ['cmp byte [infinite_lives], 0', 'jne L_1DBF'],
+    # The port's Ctrl-I invincibility (bios.c). The dog's catch test (CS:20F5)
+    # takes its "not caught" exit (CLC; RET). In the female cat level
+    # (room 7), CS:4DD0 tests one of 7 cats against the player: slot 6 is the
+    # female cat (win), slots 0-5 knock the player down at CS:4E00. That path
+    # instead returns "no overlap" through rect_overlap's CLC; RET (CS:2E4F).
+    0x20F5: ['cmp byte [invincible], 0', 'jne L_2134'],
+    0x4E00: ['cmp byte [invincible], 0', 'jne L_2E4F'],
+    # The cat head popping out of a garbage can: CS:22F7 tests it against the
+    # player (the trip off the can at CS:0E4A, and [1D58h] calls the dog).
+    # Its overlap path also returns "no overlap" through CS:2E4F.
+    0x2300: ['cmp byte [invincible], 0', 'jne L_2E4F'],
+    # Objects thrown from the windows: CS:1A1A starts a throw. While Ctrl-I is
+    # on it takes the "no throw" exit (CS:1A75); the caller ignores flags.
+    0x1A1A: ['cmp byte [invincible], 0', 'jne L_1A75'],
     # options_menu: skip the joystick question and take its "N" path (keyboard
     # selected, next text line is index 1, the skill prompt).
     0x5EEB: ['mov word [r12 + 0x6d8f], 0x2',
              'mov byte [r12 + 0x69b], 0x0',
              'jmp L_5F1C'],
     # options_menu, after the "During play:" help lines (text rows 9-13): add
-    # the Ctrl-L line on the free row 14. The string is in data.asm. DX, SI and
-    # the registers L_5E5B/L_5E2B change are reloaded by the code that follows.
+    # the Ctrl-L and Ctrl-I lines on rows 14 and 15 (strings in data.asm).
+    # The keyboard texts printed next ("Use the cursor keys...", "The Alt
+    # key...") move from rows 15-16 to 17-18: their row table entries
+    # (DS:6D63 + 1Ch/1Eh, row*256 + column) are rewritten. DX, SI and the
+    # registers L_5E5B/L_5E2B change are reloaded by the code that follows.
     0x5F5D: ['mov dx, 0x0e00',
              'call L_5E5B',
              'mov si, HELP_CTRL_L',
-             'call L_5E2B'],
+             'call L_5E2B',
+             'mov dx, 0x0f00',
+             'call L_5E5B',
+             'mov si, HELP_CTRL_I',
+             'call L_5E2B',
+             'mov word [r12 + 0x6d7f], 0x1100',
+             'mov word [r12 + 0x6d81], 0x1200'],
 }
 
 REG16 = {'AX': 'ax', 'BX': 'bx', 'CX': 'cx', 'DX': 'dx', 'SI': 'si', 'DI': 'di', 'BP': 'bp', 'SP': 'sp'}
