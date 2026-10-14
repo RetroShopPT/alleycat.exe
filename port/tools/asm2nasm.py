@@ -65,11 +65,12 @@ MARKERS = {
              'mov byte [r12 + 0x69b], 0x0',
              'jmp L_5F1C'],
     # options_menu, after the "During play:" help lines (text rows 9-13): add
-    # the Ctrl-L and Ctrl-I lines on rows 14 and 15 (strings in data.asm).
+    # the Ctrl-L, Ctrl-I and Ctrl-P lines on rows 14-16 (strings in data.asm).
     # The keyboard texts printed next ("Use the cursor keys...", "The Alt
-    # key...") move from rows 15-16 to 17-18: their row table entries
-    # (DS:6D63 + 1Ch/1Eh, row*256 + column) are rewritten. DX, SI and the
-    # registers L_5E5B/L_5E2B change are reloaded by the code that follows.
+    # key...") move from rows 15-16 to 18-19 and "Press any key to start."
+    # from row 20 to 21: their row table entries (DS:6D63 + 1Ch/1Eh/16h,
+    # row*256 + column) are rewritten. DX, SI and the registers
+    # L_5E5B/L_5E2B change are reloaded by the code that follows.
     0x5F5D: ['mov dx, 0x0e00',
              'call L_5E5B',
              'mov si, HELP_CTRL_L',
@@ -78,8 +79,13 @@ MARKERS = {
              'call L_5E5B',
              'mov si, HELP_CTRL_I',
              'call L_5E2B',
-             'mov word [r12 + 0x6d7f], 0x1100',
-             'mov word [r12 + 0x6d81], 0x1200'],
+             'mov dx, 0x1000',
+             'call L_5E5B',
+             'mov si, HELP_CTRL_P',
+             'call L_5E2B',
+             'mov word [r12 + 0x6d7f], 0x1200',
+             'mov word [r12 + 0x6d81], 0x1300',
+             'mov word [r12 + 0x6d79], 0x1500'],
 }
 
 REG16 = {'AX': 'ax', 'BX': 'bx', 'CX': 'cx', 'DX': 'dx', 'SI': 'si', 'DI': 'di', 'BP': 'bp', 'SP': 'sp'}

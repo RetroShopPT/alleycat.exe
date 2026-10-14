@@ -16,4 +16,6 @@ ds_base:
     db "   Ctrl-L  adds a life (up to 9).", 0
     times HELP_CTRL_I - ($ - ds_base) db 0
     db "   Ctrl-I  toggles invincibility.", 0
+    times HELP_CTRL_P - ($ - ds_base) db 0
+    db "   Ctrl-P  toggles PCjr colors.", 0
     times 0x10000 - ($ - ds_base) db 0      ; pad to a full 64 KB segment

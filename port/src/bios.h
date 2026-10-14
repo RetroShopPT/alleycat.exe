@@ -33,6 +33,9 @@ uint64_t host_ns(void);
 
 /* CGA color select register (port 3D9h) as last set by OUT or INT 10h/0Bh. */
 uint8_t bios_cga_color_select(void);
+/* RGBI color (0-15) of PCjr palette register 1-3 for the current room, from
+ * the game's own PCjr tables (the port's Ctrl-P PCjr colors). */
+uint8_t bios_pcjr_color(int reg);
 
 /* Delivers one XT (set 1) scancode, bit 7 = break, as the game's INT 9
  * handler at CS:14B3 would see it on port 60h. Called from the main thread

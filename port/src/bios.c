@@ -85,6 +85,18 @@ uint8_t bios_cga_color_select(void)
     return cga_color_select;
 }
 
+/* Room [0004h] at the last palette change. CS:1D31 sets the palette for each
+ * room with INT 10h/0Bh BH=1 (CGA) or INT 10h/10h (PCjr), so latching it there
+ * switches colours when the game does, not when [0004h] changes. */
+static volatile uint8_t palette_room;
+
+uint8_t bios_pcjr_color(int reg)
+{
+    /* The game's PCjr palette tables for registers 1-3, one byte per room. */
+    static const uint16_t table[3] = { 0x183B, 0x1843, 0x184B };
+    return ds_base[table[reg - 1] + (palette_room & 7)] & 0x0F;
+}
+
 /* PIT channel 0 as the BIOS programs it: mode 3, reload 65536. In mode 3 the
  * count drops by 2 per input clock, so it sweeps 65536 -> 0 every 27.5 ms. */
 static uint16_t pit0_count(void)
@@ -271,8 +283,10 @@ void bios_int10(void)
     case 0x0B:  /* set colour palette */
         if (bh == 0)
             cga_color_select = (cga_color_select & 0xE0) | (bl & 0x1F);
-        else
+        else {
             cga_color_select = (cga_color_select & ~0x20) | ((bl & 1) << 5);
+            palette_room = ds_base[4];
+        }
         break;
     case 0x0E:  /* teletype output */
         teletype(al, bl);

@@ -9,7 +9,9 @@ A port of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)) (Bill W
 > [!IMPORTANT]
 > About 99% of the code is LLM-generated and only roughly reviewed. If you have concerns about AI-generated code, avoid this project.
 
-![Alley Cat Title Screen](screenshots/title-screen.png)
+| CGA (default) | PCjr (`-pcjr` / Ctrl-P) |
+|---|---|
+| [![Title screen (CGA)](screenshots/title-screen.png)](screenshots/title-screen.png) | [![Title screen (PCjr colors)](screenshots/title-screen-pcjr.png)](screenshots/title-screen-pcjr.png) |
 
 ## Platforms and downloads
 
@@ -40,6 +42,7 @@ The macOS build is not signed or notarized: allow it under *Privacy & Security* 
  - `Ctrl-L`: adds a life, up to `9`
  - `Ctrl-K`: infinite lives (counter gets set to 0)
  - `Ctrl-I`: invincibility against the dog, the cat head in the garbage cans and the rival cats in the hearts cat room; nothing is thrown from the windows
+ - `Ctrl-P`: toggles the IBM PCjr colors and the CGA colors. With `-pcjr` on the command line, the game starts directly with the PCjr colors.
 
 ## Building
 

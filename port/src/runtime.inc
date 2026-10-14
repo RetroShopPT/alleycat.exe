@@ -304,6 +304,7 @@ extern invincible
 ; DS offsets of the port's extra help lines (data.asm), past the original data.
 %define HELP_CTRL_L 0x7140
 %define HELP_CTRL_I 0x7168
+%define HELP_CTRL_P 0x7190
 
 ; CPU_PACE ns: account ns of original 8088 time before the next instruction
 ; (see cpu_pace in bios.c). Registers and flags are preserved.

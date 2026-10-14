@@ -80,12 +80,54 @@ static const uint32_t cga_rgbi[16] = {
     0x555555, 0x5555FF, 0x55FF55, 0x55FFFF, 0xFF5555, 0xFF55FF, 0xFFFF55, 0xFFFFFF,
 };
 
+/* Ctrl-P: show the colors the game sets on a PCjr instead of the CGA palette.
+ * Display only; the game keeps running its CGA code. Main thread only. */
+static bool pcjr_colors;
+
+/* The Ctrl-P choice is kept in a one-byte file ('0' or '1') in the per-user
+ * SDL preferences folder, so the next start uses it. Failures are ignored:
+ * the game then starts with the CGA colors. */
+static SDL_RWops *open_settings(const char *mode)
+{
+    char *dir = SDL_GetPrefPath("petarov", "alleycat");
+    if (dir == NULL)
+        return NULL;
+    char path[1024];
+    SDL_snprintf(path, sizeof path, "%spcjr", dir);
+    SDL_free(dir);
+    return SDL_RWFromFile(path, mode);
+}
+
+static bool load_pcjr_colors(void)
+{
+    SDL_RWops *f = open_settings("rb");
+    char c = '0';
+    if (f != NULL) {
+        SDL_RWread(f, &c, 1, 1);
+        SDL_RWclose(f);
+    }
+    return c == '1';
+}
+
+static void save_pcjr_colors(void)
+{
+    SDL_RWops *f = open_settings("wb");
+    if (f != NULL) {
+        char c = pcjr_colors ? '1' : '0';
+        SDL_RWwrite(f, &c, 1, 1);
+        SDL_RWclose(f);
+    }
+}
+
 static void build_palette(uint32_t out[4])
 {
     uint8_t sel = bios_cga_color_select();
     int bright = (sel & 0x10) ? 8 : 0;
     out[0] = cga_rgbi[sel & 0x0F];
-    if (sel & 0x20) {
+    if (pcjr_colors) {
+        for (int reg = 1; reg <= 3; reg++)
+            out[reg] = cga_rgbi[bios_pcjr_color(reg)];
+    } else if (sel & 0x20) {
         out[1] = cga_rgbi[3 + bright];  /* cyan */
         out[2] = cga_rgbi[5 + bright];  /* magenta */
         out[3] = cga_rgbi[7 + bright];  /* white */
@@ -205,10 +247,15 @@ static int game_thread(void *unused)
 
 int main(int argc, char *argv[])
 {
-    (void)argc;
-    (void)argv;
+    /* -pcjr starts with the PCjr colors on (Ctrl-P) without saving the
+     * choice. Other arguments are ignored. */
+    bool force_pcjr = false;
+    for (int i = 1; i < argc; i++)
+        if (SDL_strcmp(argv[i], "-pcjr") == 0)
+            force_pcjr = true;
     if (!platform_init())
         return 1;
+    pcjr_colors = force_pcjr || load_pcjr_colors();
     bios_init();
 
     SDL_Thread *thread = SDL_CreateThread(game_thread, "game", NULL);
@@ -236,6 +283,11 @@ int main(int argc, char *argv[])
                         kbd_set_infinite_lives(e.type == SDL_KEYDOWN && (e.key.keysym.mod & KMOD_CTRL));
                     if (sc == SDL_SCANCODE_I)
                         kbd_set_invincible(e.type == SDL_KEYDOWN && (e.key.keysym.mod & KMOD_CTRL));
+                    if (sc == SDL_SCANCODE_P && e.type == SDL_KEYDOWN && !e.key.repeat &&
+                        (e.key.keysym.mod & KMOD_CTRL)) {
+                        pcjr_colors = !pcjr_colors;
+                        save_pcjr_colors();
+                    }
                     /* Auto-repeat is passed on, like XT typematic make codes. */
                     kbd_scancode(xt_scancode[sc] | (e.type == SDL_KEYUP ? 0x80 : 0));
                 }
