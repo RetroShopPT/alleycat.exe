@@ -14,14 +14,16 @@ A port of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)) (Bill W
 ## Controls
 
 - Cursor keys move the cat. `Alt` performs special actions.
-- In the options menu, K, H, T and A (or 1 to 4) choose the skill level: `Kitten`, `House Cat`, `Tomcat`, `Alley Cat`. The skill sets the starting difficulty; the game raises it as you complete levels.
-- `Ctrl-S` turns the sound on and off, `Ctrl-R` restarts the game, `Ctrl-M` returns to the options menu.
-- `Esc` pauses the game. On the title screen it quits.
+- In the options menu, `K`, `H`, `T` and `A` (or 1 to 4) choose the skill level. The skill sets the starting difficulty; the game raises it as you complete levels.
+- `Ctrl-S`: turns the sound on and off.
+- `Ctrl-R`: restarts the game.
+- `Ctrl-M`: returns to the options menu.
+- `Esc`: pauses the game whie playing; quits the game on the title screen.
 
-Added:
+### New (not in the original game):
 
- - `F10`, `Ctrl-W` and `Ctrl-Q` quit at any time.
- - `Ctrl-L` adds a life, up to `9`. This is not in the original game.
+ - `F10`, `Ctrl-W` and `Ctrl-Q`: quits at any time
+ - `Ctrl-L`: adds a life, up to `9`
 
 ## Building
 
