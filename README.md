@@ -1,6 +1,6 @@
 # Alley Cat (x86-64 port)
 
-[![version](https://img.shields.io/badge/release-1.0-orange)](https://github.com/petarov/alleycat.exe/releases/latest)
+[![version](https://img.shields.io/badge/release-1.1-orange)](https://github.com/petarov/alleycat.exe/releases/latest)
 [![platforms-windows-mac-linux](https://img.shields.io/badge/platforms-windows,%20mac,%20linux-blue)](https://github.com/petarov/alleycat.exe/releases/latest)
 [![license-unlicense](https://img.shields.io/badge/license-Unlicense-green)](https://github.com/petarov/alleycat.exe/blob/main/LICENSE)
 
