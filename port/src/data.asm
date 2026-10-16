@@ -18,4 +18,10 @@ ds_base:
     db "   Ctrl-I  toggles invincibility.", 0
     times HELP_CTRL_P - ($ - ds_base) db 0
     db "   Ctrl-P  toggles PCjr colors.", 0
+    times HELP_FULLSCREEN - ($ - ds_base) db 0
+%ifidn __OUTPUT_FORMAT__, macho64
+    db "   Cmd-Enter toggles fullscreen.", 0
+%else
+    db "   Alt-Enter toggles fullscreen.", 0
+%endif
     times 0x10000 - ($ - ds_base) db 0      ; pad to a full 64 KB segment

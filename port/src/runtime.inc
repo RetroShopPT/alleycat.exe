@@ -306,6 +306,7 @@ extern invincible
 %define HELP_CTRL_L 0x7140
 %define HELP_CTRL_I 0x7168
 %define HELP_CTRL_P 0x7190
+%define HELP_FULLSCREEN 0x71B8
 
 ; CPU_PACE ns: account ns of original 8088 time before the next instruction
 ; (see cpu_pace in bios.c). Registers and flags are preserved.
