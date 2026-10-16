@@ -11,7 +11,7 @@ A recompilation of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)
 
 | [CGA (default)](https://github.com/petarov/alleycat.exe/blob/main/screenshots/title-screen.png) | [PCjr](https://github.com/petarov/alleycat.exe/blob/main/screenshots/title-screen-pcjr.png) (`-pcjr` / Ctrl-P) |
 |---|---|
-| ![Title screen (CGA)](screenshots/title-screen.png) | ![Title screen (PCjr colors)](screenshots/title-screen-pcjr.png) |
+| ![Title screen (CGA)](https://media.githubusercontent.com/media/petarov/alleycat.exe/refs/heads/main/screenshots/title-screen.png) | ![Title screen (PCjr colors)](https://media.githubusercontent.com/media/petarov/alleycat.exe/refs/heads/main/screenshots/title-screen-pcjr.png) |
 
 ## Platforms and downloads
 
