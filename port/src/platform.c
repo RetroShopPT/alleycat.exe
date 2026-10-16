@@ -245,6 +245,33 @@ static bool is_quit_key(const SDL_KeyboardEvent *k)
     return k->keysym.scancode == SDL_SCANCODE_ESCAPE && game_in_title;
 }
 
+/* Alt-Enter or F11 (Cmd-Enter or Cmd-F11 on macOS, where F11 alone belongs
+ * to the system) switch between window and fullscreen. */
+static bool is_fullscreen_key(const SDL_KeyboardEvent *k)
+{
+    SDL_Scancode sc = k->keysym.scancode;
+    if (sc != SDL_SCANCODE_RETURN && sc != SDL_SCANCODE_KP_ENTER && sc != SDL_SCANCODE_F11)
+        return false;
+#ifdef __APPLE__
+    return (k->keysym.mod & KMOD_GUI) != 0;
+#else
+    return sc == SDL_SCANCODE_F11 || (k->keysym.mod & KMOD_ALT) != 0;
+#endif
+}
+
+/* Fullscreen at the desktop resolution; the logical size keeps the picture
+ * scaled and centered. The mouse cursor is hidden there, the game has no use
+ * for it. */
+static bool set_fullscreen(bool on)
+{
+    if (SDL_SetWindowFullscreen(window, on ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) != 0) {
+        SDL_Log("SDL_SetWindowFullscreen failed: %s", SDL_GetError());
+        return false;
+    }
+    SDL_ShowCursor(on ? SDL_DISABLE : SDL_ENABLE);
+    return true;
+}
+
 static int game_thread(void *unused)
 {
     (void)unused;
@@ -256,13 +283,18 @@ static int game_thread(void *unused)
 int main(int argc, char *argv[])
 {
     /* -pcjr starts with the PCjr colors on (Ctrl-P) without saving the
-     * choice. Other arguments are ignored. */
-    bool force_pcjr = false;
-    for (int i = 1; i < argc; i++)
+     * choice, --fullscreen starts in fullscreen. Other arguments are ignored. */
+    bool force_pcjr = false, fullscreen = false;
+    for (int i = 1; i < argc; i++) {
         if (SDL_strcmp(argv[i], "-pcjr") == 0)
             force_pcjr = true;
+        else if (SDL_strcmp(argv[i], "--fullscreen") == 0)
+            fullscreen = true;
+    }
     if (!platform_init())
         return 1;
+    if (fullscreen)
+        fullscreen = set_fullscreen(true);
     pcjr_colors = force_pcjr || load_pcjr_colors();
     bios_init();
 
@@ -290,6 +322,12 @@ int main(int argc, char *argv[])
                 SDL_Scancode sc = e.key.keysym.scancode;
                 if (e.type == SDL_KEYDOWN && is_quit_key(&e.key)) {
                     quit = true;
+                } else if (is_fullscreen_key(&e.key)) {
+                    /* Not passed to the game. */
+                    if (e.type == SDL_KEYDOWN && !e.key.repeat) {
+                        if (set_fullscreen(!fullscreen))
+                            fullscreen = !fullscreen;
+                    }
                 } else if (xt_scancode[sc] != 0) {
                     if (sc == SDL_SCANCODE_L)
                         kbd_set_add_life(e.type == SDL_KEYDOWN && (e.key.keysym.mod & KMOD_CTRL));
