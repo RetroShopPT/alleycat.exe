@@ -9,9 +9,9 @@ A recompilation of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)
 > [!IMPORTANT]
 > About 99% of the code is LLM-generated and only roughly reviewed. If you have concerns about AI-generated code, avoid this project.
 
-| CGA (default) | PCjr (`-pcjr` / Ctrl-P) |
+| [CGA (default)](https://github.com/petarov/alleycat.exe/blob/main/screenshots/title-screen.png) | [PCjr](https://github.com/petarov/alleycat.exe/blob/main/screenshots/title-screen-pcjr.png) (`-pcjr` / Ctrl-P) |
 |---|---|
-| [![Title screen (CGA)](screenshots/title-screen.png)](screenshots/title-screen.png) | [![Title screen (PCjr colors)](screenshots/title-screen-pcjr.png)](screenshots/title-screen-pcjr.png) |
+| ![Title screen (CGA)](screenshots/title-screen.png) | ![Title screen (PCjr colors)](screenshots/title-screen-pcjr.png) |
 
 ## Platforms and downloads
 
