@@ -32,8 +32,7 @@ The macOS build is not signed or notarized: allow it under *Privacy & Security* 
   - **Room 6** (milk bowls, sleeping dogs): hold it next to a bowl to drink from it. A full bowl takes several sips, and the room has 12 bowls.
   - **Room 7** (hearts cat room): drops a picked-up gift on the nearest shelf at the cat's position. A rival cat that walks into a gift takes it and stays away for a while. Each completed room adds one gift, up to 8.
 - `Ctrl-S`: turns the sound on and off
-- `Ctrl-R`: restarts the game
-- `Ctrl-M`: returns to the options menu
+- `Ctrl-R`: returns to the title screen
 - `Esc`: pauses the game whie playing; quits the game on the title screen.
 
 ### New (not in the original game):

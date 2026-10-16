@@ -38,6 +38,15 @@ MARKERS = {
     0x0099: ['mov byte [game_in_title], 0'],
     # handle_hotkeys entry: the port's Ctrl-L (bios.c). Registers and flags kept.
     0x1338: ['CCALL port_hotkeys'],
+    # Ctrl-M (back to the options menu) is removed: skip to the Ctrl-R test.
+    0x1374: ['jmp L_1381'],
+    # Ctrl-R ([041Bh]) returns to the title screen (CS:0081, as after game
+    # over) instead of restarting the game (CS:00AE). Clearing [041Ah] makes
+    # main show the options menu after the title, as at program start. The
+    # flag is cleared when the next game starts.
+    0x00FF: ['jz L_0101', 'mov byte [r12 + 0x41a], 0', 'jmp L_0081'],
+    0x0173: ['mov byte [r12 + 0x41a], 0', 'jmp L_0081'],
+    0x042E: ['mov byte [r12 + 0x41a], 0', 'jmp L_0081'],
     # Loops that only wait for a key (keypress counter [0693h] to change):
     # sleep 1 ms per pass instead of spinning a host core. Registers and flags
     # kept. Joystick question, skill menu, "Press any key" / Esc pause, text
@@ -72,32 +81,39 @@ MARKERS = {
     0x5EEB: ['mov word [r12 + 0x6d8f], 0x2',
              'mov byte [r12 + 0x69b], 0x0',
              'jmp L_5F1C'],
-    # options_menu, after the "During play:" help lines (text rows 9-13): add
-    # the Ctrl-L, Ctrl-I, Ctrl-P and fullscreen lines on rows 14-17 (strings
-    # in data.asm). The keyboard texts printed next ("Use the cursor keys...",
-    # "The Alt key...") move from rows 15-16 to 19-20 and "Press any key to
-    # start." from row 20 to 22: their row table entries (DS:6D63 + 1Ch/1Eh/16h,
+    # options_menu, "During play:" help (text rows 9-13, 5 lines from the
+    # string table at DS:6D37 + 0Ch..14h): the Ctrl-R line points to the
+    # port's text and the Ctrl-M line is dropped, Esc moves up to row 12.
+    0x5F53: ['mov word [r12 + 0x6d37 + 0x10], HELP_CTRL_R',
+             'mov word [r12 + 0x6d37 + 0x12], 0x6b92',
+             'mov cx, 4',
+             'jmp L_5F56'],
+    # After those lines (rows 9-12): add the Ctrl-L, Ctrl-I, Ctrl-P and
+    # fullscreen lines on rows 13-16 (strings in data.asm). The keyboard texts
+    # printed next ("Use the cursor keys...", "The Alt key...") move from rows
+    # 15-16 to 18-19 and "Press any key to start." from row 20 to 21: their
+    # row table entries (DS:6D63 + 1Ch/1Eh/16h,
     # row*256 + column) are rewritten. DX, SI and the registers
     # L_5E5B/L_5E2B change are reloaded by the code that follows.
-    0x5F5D: ['mov dx, 0x0e00',
+    0x5F5D: ['mov dx, 0x0d00',
              'call L_5E5B',
              'mov si, HELP_CTRL_L',
              'call L_5E2B',
-             'mov dx, 0x0f00',
+             'mov dx, 0x0e00',
              'call L_5E5B',
              'mov si, HELP_CTRL_I',
              'call L_5E2B',
-             'mov dx, 0x1000',
+             'mov dx, 0x0f00',
              'call L_5E5B',
              'mov si, HELP_CTRL_P',
              'call L_5E2B',
-             'mov dx, 0x1100',
+             'mov dx, 0x1000',
              'call L_5E5B',
              'mov si, HELP_FULLSCREEN',
              'call L_5E2B',
-             'mov word [r12 + 0x6d7f], 0x1300',
-             'mov word [r12 + 0x6d81], 0x1400',
-             'mov word [r12 + 0x6d79], 0x1600'],
+             'mov word [r12 + 0x6d7f], 0x1200',
+             'mov word [r12 + 0x6d81], 0x1300',
+             'mov word [r12 + 0x6d79], 0x1500'],
 }
 
 REG16 = {'AX': 'ax', 'BX': 'bx', 'CX': 'cx', 'DX': 'dx', 'SI': 'si', 'DI': 'di', 'BP': 'bp', 'SP': 'sp'}

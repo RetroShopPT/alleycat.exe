@@ -24,4 +24,6 @@ ds_base:
 %else
     db "   Alt-Enter toggles fullscreen.", 0
 %endif
+    times HELP_CTRL_R - ($ - ds_base) db 0
+    db "   Ctrl-R  returns to the title screen.", 0
     times 0x10000 - ($ - ds_base) db 0      ; pad to a full 64 KB segment

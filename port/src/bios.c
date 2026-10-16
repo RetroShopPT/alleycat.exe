@@ -119,7 +119,11 @@ void kbd_scancode(uint8_t code)
             break;
         }
     }
-    if (!(code & 0x80)) {
+    /* On the title screen any counted press leaves it (CS:5DCD); Ctrl, Alt and
+     * Shift alone do not count there. */
+    uint8_t make = code & 0x7F;
+    bool modifier = make == 0x1D || make == 0x38 || make == 0x2A || make == 0x36;
+    if (!(code & 0x80) && !(modifier && game_in_title)) {
         uint16_t n = (uint16_t)(ds_base[KBD_PRESS_COUNT] | ds_base[KBD_PRESS_COUNT + 1] << 8) + 1;
         __atomic_store_n(&ds_base[KBD_PRESS_COUNT], (uint8_t)n, __ATOMIC_RELEASE);
         __atomic_store_n(&ds_base[KBD_PRESS_COUNT + 1], (uint8_t)(n >> 8), __ATOMIC_RELEASE);
