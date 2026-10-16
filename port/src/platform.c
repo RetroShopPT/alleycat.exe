@@ -84,24 +84,25 @@ static const uint32_t cga_rgbi[16] = {
  * Display only; the game keeps running its CGA code. Main thread only. */
 static bool pcjr_colors;
 
-/* The Ctrl-P choice is kept in a one-byte file ('0' or '1') in the per-user
- * SDL preferences folder, so the next start uses it. Failures are ignored:
- * the game then starts with the CGA colors. */
-static SDL_RWops *open_settings(const char *mode)
+/* The Ctrl-P choice ("pcjr") and window or fullscreen ("fullscreen") are each
+ * kept in a one-byte file ('0' or '1') in the per-user SDL preferences
+ * folder, so the next start uses them. Failures are ignored: the game then
+ * starts with the defaults (CGA colors, fullscreen). */
+static SDL_RWops *open_setting(const char *name, const char *mode)
 {
     char *dir = SDL_GetPrefPath("petarov", "alleycat");
     if (dir == NULL)
         return NULL;
     char path[1024];
-    SDL_snprintf(path, sizeof path, "%spcjr", dir);
+    SDL_snprintf(path, sizeof path, "%s%s", dir, name);
     SDL_free(dir);
     return SDL_RWFromFile(path, mode);
 }
 
-static bool load_pcjr_colors(void)
+static bool load_setting(const char *name, bool default_value)
 {
-    SDL_RWops *f = open_settings("rb");
-    char c = '0';
+    SDL_RWops *f = open_setting(name, "rb");
+    char c = default_value ? '1' : '0';
     if (f != NULL) {
         SDL_RWread(f, &c, 1, 1);
         SDL_RWclose(f);
@@ -109,11 +110,11 @@ static bool load_pcjr_colors(void)
     return c == '1';
 }
 
-static void save_pcjr_colors(void)
+static void save_setting(const char *name, bool value)
 {
-    SDL_RWops *f = open_settings("wb");
+    SDL_RWops *f = open_setting(name, "wb");
     if (f != NULL) {
-        char c = pcjr_colors ? '1' : '0';
+        char c = value ? '1' : '0';
         SDL_RWwrite(f, &c, 1, 1);
         SDL_RWclose(f);
     }
@@ -138,18 +139,21 @@ static void build_palette(uint32_t out[4])
     }
 }
 
-static bool platform_init(void)
+static bool platform_init(bool fullscreen)
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
         SDL_Log("SDL_Init failed: %s", SDL_GetError());
         return false;
     }
     window = SDL_CreateWindow("Alley Cat", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                              CGA_WIDTH * WINDOW_SCALE, CGA_HEIGHT * WINDOW_SCALE, SDL_WINDOW_RESIZABLE);
+                              CGA_WIDTH * WINDOW_SCALE, CGA_HEIGHT * WINDOW_SCALE,
+                              SDL_WINDOW_RESIZABLE | (fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
     if (window == NULL) {
         SDL_Log("SDL_CreateWindow failed: %s", SDL_GetError());
         return false;
     }
+    if (fullscreen)
+        SDL_ShowCursor(SDL_DISABLE);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
     if (renderer == NULL) {
         SDL_Log("SDL_CreateRenderer failed: %s", SDL_GetError());
@@ -282,20 +286,20 @@ static int game_thread(void *unused)
 
 int main(int argc, char *argv[])
 {
-    /* -pcjr starts with the PCjr colors on (Ctrl-P) without saving the
-     * choice, --fullscreen starts in fullscreen. Other arguments are ignored. */
-    bool force_pcjr = false, fullscreen = false;
+    /* -pcjr starts with the PCjr colors on (Ctrl-P) and --window in a window,
+     * without saving either choice. Other arguments are ignored. */
+    bool force_pcjr = false, force_window = false;
     for (int i = 1; i < argc; i++) {
         if (SDL_strcmp(argv[i], "-pcjr") == 0)
             force_pcjr = true;
-        else if (SDL_strcmp(argv[i], "--fullscreen") == 0)
-            fullscreen = true;
+        else if (SDL_strcmp(argv[i], "--window") == 0)
+            force_window = true;
     }
-    if (!platform_init())
+    /* SDL_GetPrefPath works before SDL_Init. */
+    bool fullscreen = !force_window && load_setting("fullscreen", true);
+    if (!platform_init(fullscreen))
         return 1;
-    if (fullscreen)
-        fullscreen = set_fullscreen(true);
-    pcjr_colors = force_pcjr || load_pcjr_colors();
+    pcjr_colors = force_pcjr || load_setting("pcjr", false);
     bios_init();
 
     SDL_Thread *thread = SDL_CreateThread(game_thread, "game", NULL);
@@ -325,8 +329,10 @@ int main(int argc, char *argv[])
                 } else if (is_fullscreen_key(&e.key)) {
                     /* Not passed to the game. */
                     if (e.type == SDL_KEYDOWN && !e.key.repeat) {
-                        if (set_fullscreen(!fullscreen))
+                        if (set_fullscreen(!fullscreen)) {
                             fullscreen = !fullscreen;
+                            save_setting("fullscreen", fullscreen);
+                        }
                     }
                 } else if (xt_scancode[sc] != 0) {
                     if (sc == SDL_SCANCODE_L)
@@ -338,7 +344,7 @@ int main(int argc, char *argv[])
                     if (sc == SDL_SCANCODE_P && e.type == SDL_KEYDOWN && !e.key.repeat &&
                         (e.key.keysym.mod & KMOD_CTRL)) {
                         pcjr_colors = !pcjr_colors;
-                        save_pcjr_colors();
+                        save_setting("pcjr", pcjr_colors);
                         force = true;
                     }
                     /* Auto-repeat is passed on, like XT typematic make codes. */

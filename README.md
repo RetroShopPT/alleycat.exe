@@ -42,7 +42,7 @@ The macOS build is not signed or notarized: allow it under *Privacy & Security* 
  - `Ctrl-K`: infinite lives (counter gets set to 0)
  - `Ctrl-I`: invincibility against the dog, the cat head in the garbage cans and the rival cats in the hearts cat room; nothing is thrown from the windows
  - `Ctrl-P`: toggles the IBM PCjr colors and the CGA colors. With `-pcjr` on the command line, the game starts directly with the PCjr colors.
- - `Alt-Enter` or `F11` (`Cmd-Enter` or `Cmd-F11` on macOS): toggles fullscreen. With `--fullscreen` on the command line, the game starts in fullscreen. The mouse cursor is hidden in fullscreen.
+ - `Alt-Enter` or `F11` (`Cmd-Enter` or `Cmd-F11` on macOS): toggles fullscreen. The game starts in fullscreen by default. With `--window` on the command line, it starts in a window.
 
 ## Building
 
