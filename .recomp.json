@@ -7,10 +7,11 @@
   "original": { "revision": "1984", "sha1": "77d7b7a613d4fa3e707f3c90d368032745a8405a" },
   "project": "Alley Cat (x86-64 recomp)",
   "status": "complete",
-  "targets": ["Windows", "Linux", "macOS"],
+  "targets": ["Windows", "Linux", "macOS", "Browser"],
   "toolchain": ["Ghidra", "Asm2nasm"],
   "approach": "Static translation of the 8088 code to x86-64 NASM, emulated PC hardware, SDL2 front end",
   "maintainers": [{ "name": "petarov", "link": "https://github.com/petarov" }],
+  "links": [{ "label": "Play in browser", "url": "https://petarov.github.io/alleycat.exe/" }],
   "notes": "99% LLM-generated code. Builds need the original CAT.EXE, which is not included.",
   "tags": ["x86-64", "8088", "CGA", "SDL2", "Atari"]
 }
