@@ -6,7 +6,7 @@
   "type": "recomp",
   "original": { "revision": "1984", "sha1": "77d7b7a613d4fa3e707f3c90d368032745a8405a" },
   "project": "Alley Cat (x86-64 recomp)",
-  "status": "released",
+  "status": "complete",
   "targets": ["Windows", "Linux", "macOS"],
   "toolchain": ["Ghidra", "Asm2nasm"],
   "approach": "Static translation of the 8088 code to x86-64 NASM, emulated PC hardware, SDL2 front end",
