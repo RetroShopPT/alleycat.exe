@@ -319,8 +319,9 @@ def in_hand_written(cs):
     return any(a <= cs <= b for a, b in HAND_WRITTEN)
 
 
-def main():
-    src, out = sys.argv[1], sys.argv[2]
+def parse_listing(src):
+    """Return (rows, proc_names, jump_tables) of the listing; also used by
+    tools/asm2c.py."""
     rows = []           # (cs, raw bytes, mnemonic, operands) in listing order
     proc_names = {}
     db_bytes = {}       # CS offset -> byte value, from data rows
@@ -346,6 +347,12 @@ def main():
             t = int(m.group(1), 16)
             entries = [db_bytes[t + 2 * i] | db_bytes[t + 2 * i + 1] << 8 for i in range(JUMP_TABLE_ENTRIES)]
             jump_tables[t] = entries
+    return rows, proc_names, jump_tables
+
+
+def main():
+    src, out = sys.argv[1], sys.argv[2]
+    rows, proc_names, jump_tables = parse_listing(src)
 
     referenced = set()
     body = []

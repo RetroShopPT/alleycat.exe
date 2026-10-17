@@ -7,12 +7,20 @@
  * it scans out cga_vram at the display rate and delivers key events to the
  * game's keyboard table (kbd_scancode). The speaker is rendered on SDL's
  * audio thread (speaker.c).
+ *
+ * The web build (Emscripten) has no game thread: the browser calls
+ * web_frame, which handles events, runs the game for a slice (game_run in
+ * the C translation, see bios.h) and presents the screen.
  */
 #include "bios.h"
 #include "font8x8.h"
 #include "speaker.h"
 
 #include <SDL2/SDL.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #define CGA_WIDTH 320
 #define CGA_HEIGHT 200
@@ -25,6 +33,11 @@ static SDL_Renderer *renderer;
 static SDL_Texture *texture;
 static uint32_t pixels[CGA_WIDTH * CGA_HEIGHT];
 static SDL_atomic_t game_finished;
+
+/* Main loop state, main thread only. */
+static bool quit;
+static bool force;          /* present even an unchanged frame */
+static bool fullscreen;
 
 /* SDL (USB HID) scancode -> XT set 1 scancode; 0 = no XT equivalent. Keys are
  * mapped by position, as the original reads raw scancodes. The keypad gives
@@ -263,6 +276,7 @@ static bool is_fullscreen_key(const SDL_KeyboardEvent *k)
 #endif
 }
 
+#ifndef __EMSCRIPTEN__
 /* Fullscreen at the desktop resolution; the logical size keeps the picture
  * scaled and centered. The mouse cursor is hidden there, the game has no use
  * for it. */
@@ -275,6 +289,91 @@ static bool set_fullscreen(bool on)
     SDL_ShowCursor(on ? SDL_DISABLE : SDL_ENABLE);
     return true;
 }
+#endif
+
+#ifdef __EMSCRIPTEN__
+/* The page goes fullscreen, not the canvas, and its CSS keeps the canvas
+ * scaled to fit. Called shortly after the key press, while the browser
+ * still treats the page as user-activated. */
+EM_JS(void, web_toggle_fullscreen, (void), {
+    if (document.fullscreenElement)
+        document.exitFullscreen();
+    else
+        document.documentElement.requestFullscreen().catch(function () {});
+});
+#endif
+
+/* One SDL event: quit, fullscreen and the port's hotkeys, keys for the game. */
+static void handle_event(const SDL_Event *e)
+{
+    if (e->type == SDL_QUIT) {
+        quit = true;
+    } else if (e->type == SDL_WINDOWEVENT || e->type == SDL_RENDER_TARGETS_RESET) {
+        force = true;
+    } else if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) {
+        SDL_Scancode sc = e->key.keysym.scancode;
+        if (e->type == SDL_KEYDOWN && is_quit_key(&e->key)) {
+#ifndef __EMSCRIPTEN__
+            quit = true;    /* a web page cannot quit: the key is dropped */
+#endif
+        } else if (is_fullscreen_key(&e->key)) {
+            /* Not passed to the game. */
+            if (e->type == SDL_KEYDOWN && !e->key.repeat) {
+#ifdef __EMSCRIPTEN__
+                web_toggle_fullscreen();
+#else
+                if (set_fullscreen(!fullscreen)) {
+                    fullscreen = !fullscreen;
+                    save_setting("fullscreen", fullscreen);
+                }
+#endif
+            }
+        } else if (xt_scancode[sc] != 0) {
+            if (sc == SDL_SCANCODE_L)
+                kbd_set_add_life(e->type == SDL_KEYDOWN && (e->key.keysym.mod & KMOD_CTRL));
+            if (sc == SDL_SCANCODE_K)
+                kbd_set_infinite_lives(e->type == SDL_KEYDOWN && (e->key.keysym.mod & KMOD_CTRL));
+            if (sc == SDL_SCANCODE_I)
+                kbd_set_invincible(e->type == SDL_KEYDOWN && (e->key.keysym.mod & KMOD_CTRL));
+            if (sc == SDL_SCANCODE_P && e->type == SDL_KEYDOWN && !e->key.repeat &&
+                (e->key.keysym.mod & KMOD_CTRL)) {
+                pcjr_colors = !pcjr_colors;
+                save_setting("pcjr", pcjr_colors);
+                force = true;
+            }
+            /* Auto-repeat is passed on, like XT typematic make codes. */
+            kbd_scancode(xt_scancode[sc] | (e->type == SDL_KEYUP ? 0x80 : 0));
+        }
+    }
+}
+
+#ifdef __EMSCRIPTEN__
+/* One pass of the browser's main loop: events, a slice of the game, and the
+ * screen at most 60 times a second. When the game waits (bios.c), the next
+ * pass comes after that wait, otherwise as soon as the browser is free. */
+static void web_frame(void)
+{
+    static Uint64 last_present;
+    SDL_Event e;
+    while (SDL_PollEvent(&e))
+        handle_event(&e);
+    bios_slice_begin();
+    game_yield = 0;
+    if (!game_run())
+        game_start();   /* the game exited to DOS: start over */
+    uint32_t ms = bios_slice_sleep_ms();
+    if (ms > 0)
+        emscripten_set_main_loop_timing(EM_TIMING_SETTIMEOUT, (int)ms);
+    else
+        emscripten_set_main_loop_timing(EM_TIMING_SETIMMEDIATE, 0);
+    Uint64 now = SDL_GetPerformanceCounter();
+    if (force || now - last_present >= SDL_GetPerformanceFrequency() / 60) {
+        present(force);
+        force = false;
+        last_present = now;
+    }
+}
+#endif
 
 static int game_thread(void *unused)
 {
@@ -295,12 +394,33 @@ int main(int argc, char *argv[])
         else if (SDL_strcmp(argv[i], "--window") == 0)
             force_window = true;
     }
+#ifdef __EMSCRIPTEN__
+    /* A page can only go fullscreen on a key press or click, and has no
+     * preferences folder that outlives it: start in the page, with the
+     * PCjr colors (Ctrl-P switches to CGA). */
+    (void)force_window;
+    fullscreen = false;
+#else
     /* SDL_GetPrefPath works before SDL_Init. */
-    bool fullscreen = !force_window && load_setting("fullscreen", true);
+    fullscreen = !force_window && load_setting("fullscreen", true);
+#endif
     if (!platform_init(fullscreen))
         return 1;
+#ifdef __EMSCRIPTEN__
+    pcjr_colors = force_pcjr || load_setting("pcjr", true);
+#else
     pcjr_colors = force_pcjr || load_setting("pcjr", false);
+#endif
     bios_init();
+
+#ifdef __EMSCRIPTEN__
+    /* With text input off, SDL keeps the browser from acting on the keys
+     * (Ctrl-R reload, Ctrl-P print, ...) where the browser allows it. */
+    SDL_StopTextInput();
+    game_start();
+    emscripten_set_main_loop(web_frame, 0, false);
+    return 0;
+#endif
 
     SDL_Thread *thread = SDL_CreateThread(game_thread, "game", NULL);
     if (thread == NULL) {
@@ -310,48 +430,14 @@ int main(int argc, char *argv[])
     }
     SDL_DetachThread(thread);
 
-    bool quit = false;
-    bool force = true;
+    force = true;
     const Uint64 freq = SDL_GetPerformanceFrequency();
     const Uint64 frame = freq / 60;
     Uint64 next_frame = SDL_GetPerformanceCounter();
     while (!quit && !SDL_AtomicGet(&game_finished)) {
         SDL_Event e;
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) {
-                quit = true;
-            } else if (e.type == SDL_WINDOWEVENT || e.type == SDL_RENDER_TARGETS_RESET) {
-                force = true;
-            } else if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) {
-                SDL_Scancode sc = e.key.keysym.scancode;
-                if (e.type == SDL_KEYDOWN && is_quit_key(&e.key)) {
-                    quit = true;
-                } else if (is_fullscreen_key(&e.key)) {
-                    /* Not passed to the game. */
-                    if (e.type == SDL_KEYDOWN && !e.key.repeat) {
-                        if (set_fullscreen(!fullscreen)) {
-                            fullscreen = !fullscreen;
-                            save_setting("fullscreen", fullscreen);
-                        }
-                    }
-                } else if (xt_scancode[sc] != 0) {
-                    if (sc == SDL_SCANCODE_L)
-                        kbd_set_add_life(e.type == SDL_KEYDOWN && (e.key.keysym.mod & KMOD_CTRL));
-                    if (sc == SDL_SCANCODE_K)
-                        kbd_set_infinite_lives(e.type == SDL_KEYDOWN && (e.key.keysym.mod & KMOD_CTRL));
-                    if (sc == SDL_SCANCODE_I)
-                        kbd_set_invincible(e.type == SDL_KEYDOWN && (e.key.keysym.mod & KMOD_CTRL));
-                    if (sc == SDL_SCANCODE_P && e.type == SDL_KEYDOWN && !e.key.repeat &&
-                        (e.key.keysym.mod & KMOD_CTRL)) {
-                        pcjr_colors = !pcjr_colors;
-                        save_setting("pcjr", pcjr_colors);
-                        force = true;
-                    }
-                    /* Auto-repeat is passed on, like XT typematic make codes. */
-                    kbd_scancode(xt_scancode[sc] | (e.type == SDL_KEYUP ? 0x80 : 0));
-                }
-            }
-        }
+        while (SDL_PollEvent(&e))
+            handle_event(&e);
         present(force);
         force = false;
         /* At most 60 frames per second: vsync does not always wait (e.g. over

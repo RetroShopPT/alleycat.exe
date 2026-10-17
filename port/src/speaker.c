@@ -16,10 +16,18 @@
 
 #define PIT_HZ 1193182.0
 #define SAMPLE_RATE 48000
-#define BUFFER_FRAMES 512
 #define OVERSAMPLE 8
+#ifdef __EMSCRIPTEN__
+/* In the browser the callback runs on the main thread between game slices
+ * (platform.c), so it needs larger buffers and more delay. */
+#define BUFFER_FRAMES 2048
+#define LATENCY_NS 100000000ULL
+#define RESYNC_NS 250000000ULL
+#else
+#define BUFFER_FRAMES 512
 #define LATENCY_NS 40000000ULL      /* replay this far behind real time */
 #define RESYNC_NS 150000000ULL      /* larger drift: jump to real time */
+#endif
 #define RING_SIZE (1u << 16)
 #define VOLUME 0.25f
 #define DC_BLOCK 0.995f
@@ -46,7 +54,7 @@ static uint16_t cur_reload;
 static double phase;                 /* square wave phase, fraction of a cycle */
 static float dc_prev_in, dc_prev_out;
 
-void speaker_set(uint8_t port61, uint16_t pit2_reload)
+void speaker_set(uint64_t t_ns, uint8_t port61, uint16_t pit2_reload)
 {
     static uint8_t last_port61;
     static uint16_t last_reload;
@@ -63,7 +71,7 @@ void speaker_set(uint8_t port61, uint16_t pit2_reload)
         atomic_store_explicit(&ring_overflow, true, memory_order_release);
         return;
     }
-    ring[head % RING_SIZE] = (struct speaker_event){ host_ns(), pit2_reload, port61 };
+    ring[head % RING_SIZE] = (struct speaker_event){ t_ns, pit2_reload, port61 };
     atomic_store_explicit(&ring_head, head + 1, memory_order_release);
 }
 

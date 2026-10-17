@@ -17,7 +17,8 @@ bool speaker_init(void);
 void speaker_shutdown(void);
 
 /* Game thread: new port 61h value (bit 0 = PIT channel 2 gate, bit 1 =
- * speaker data) and channel 2 reload count (0 = 65536). */
-void speaker_set(uint8_t port61, uint16_t pit2_reload);
+ * speaker data) and channel 2 reload count (0 = 65536), as of t_ns on the
+ * host_ns clock. */
+void speaker_set(uint64_t t_ns, uint8_t port61, uint16_t pit2_reload);
 
 #endif

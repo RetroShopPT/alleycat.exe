@@ -45,6 +45,8 @@ static uint16_t pit0_latch;
 static int pit0_latched_bytes;      /* bytes of the latch still to be read */
 static uint8_t cursor_row, cursor_col;
 
+static uint64_t sound_ns(void);
+
 uint64_t host_ns(void)
 {
     uint64_t freq = SDL_GetPerformanceFrequency();
@@ -119,11 +121,12 @@ void kbd_scancode(uint8_t code)
             break;
         }
     }
-    /* On the title screen any counted press leaves it (CS:5DCD); Ctrl, Alt and
-     * Shift alone do not count there. */
+    /* On the title screen any counted press leaves it (CS:5DCD); Ctrl, Alt,
+     * Shift and the arrow keys alone do not count there. */
     uint8_t make = code & 0x7F;
     bool modifier = make == 0x1D || make == 0x38 || make == 0x2A || make == 0x36;
-    if (!(code & 0x80) && !(modifier && game_in_title)) {
+    bool arrow = make == 0x48 || make == 0x4B || make == 0x4D || make == 0x50;
+    if (!(code & 0x80) && !((modifier || arrow) && game_in_title)) {
         uint16_t n = (uint16_t)(ds_base[KBD_PRESS_COUNT] | ds_base[KBD_PRESS_COUNT + 1] << 8) + 1;
         __atomic_store_n(&ds_base[KBD_PRESS_COUNT], (uint8_t)n, __ATOMIC_RELEASE);
         __atomic_store_n(&ds_base[KBD_PRESS_COUNT + 1], (uint8_t)(n >> 8), __ATOMIC_RELEASE);
@@ -327,6 +330,44 @@ static uint64_t ticks_at(uint64_t ns)
 #define IDLE_MARGIN_NS 2000000ULL
 #define IDLE_AFTER_POLLS 500
 
+#ifdef __EMSCRIPTEN__
+/* The web build cannot block: a sleep or a used-up slice (SLICE_NS of game
+ * time) sets game_yield, and the platform calls game_run again after
+ * slice_sleep_ms (or at once). */
+#define SLICE_NS 8000000ULL
+
+static uint64_t slice_start;
+static uint32_t slice_sleep_ms;
+
+void bios_slice_begin(void)
+{
+    slice_start = host_ns();
+    slice_sleep_ms = 0;
+}
+
+bool bios_slice_over(void)
+{
+    return host_ns() - slice_start >= SLICE_NS;
+}
+
+uint32_t bios_slice_sleep_ms(void)
+{
+    return slice_sleep_ms;
+}
+
+static void web_sleep(uint32_t ms)
+{
+    slice_sleep_ms = ms;
+    game_yield = 1;
+}
+
+static void web_check_slice(void)
+{
+    if (bios_slice_over())
+        game_yield = 1;
+}
+#endif
+
 static void idle_sleep(uint64_t now, uint64_t ticks)
 {
     uint64_t next_tick = ((ticks + 1) * 65536 * 1000000000ULL + PIT_HZ - 1) / PIT_HZ;
@@ -335,13 +376,22 @@ static void idle_sleep(uint64_t now, uint64_t ticks)
     uint64_t to_retrace = phase < CGA_VRETRACE_NS ? 0 : CGA_FRAME_NS - phase;
     if (to_retrace < gap)
         gap = to_retrace;
-    if (gap > IDLE_MARGIN_NS + 1000000ULL)
+    if (gap > IDLE_MARGIN_NS + 1000000ULL) {
+#ifdef __EMSCRIPTEN__
+        web_sleep((uint32_t)((gap - IDLE_MARGIN_NS) / 1000000ULL));
+#else
         SDL_Delay((Uint32)((gap - IDLE_MARGIN_NS) / 1000000ULL));
+#endif
+    }
 }
 
 void port_idle(void)
 {
+#ifdef __EMSCRIPTEN__
+    web_sleep(1);
+#else
     SDL_Delay(1);
+#endif
 }
 
 void bios_int1a(void)
@@ -352,6 +402,9 @@ void bios_int1a(void)
         log_once(0x1A00 | (cpu.ax >> 8), "INT 1Ah: unsupported function");
         return;
     }
+#ifdef __EMSCRIPTEN__
+    web_check_slice();
+#endif
     uint64_t now = elapsed_ns();
     uint64_t ticks = ticks_at(now);
     if (ticks != last_ticks) {
@@ -369,6 +422,9 @@ void bios_int1a(void)
 
 uint32_t io_in(void)
 {
+#ifdef __EMSCRIPTEN__
+    web_check_slice();
+#endif
     switch (cpu.port) {
     case 0x40:
         if (pit0_latched_bytes == 0) {
@@ -407,7 +463,7 @@ void io_out(void)
         speaker_io = true;
         if (pit2_write_high) {
             pit2_reload = (pit2_reload & 0x00FF) | al << 8;
-            speaker_set(port61, pit2_reload);   /* new count is complete */
+            speaker_set(sound_ns(), port61, pit2_reload);   /* new count is complete */
         } else {
             pit2_reload = (pit2_reload & 0xFF00) | al;
         }
@@ -416,7 +472,7 @@ void io_out(void)
     case 0x61:  /* bit 0 = PIT channel 2 gate, bit 1 = speaker data */
         speaker_io = true;
         port61 = al;
-        speaker_set(port61, pit2_reload);
+        speaker_set(sound_ns(), port61, pit2_reload);
         break;
     case 0x3D9:
         cga_color_select = al;
@@ -433,18 +489,34 @@ void io_out(void)
 /* Emulates the 8088 speed for the code at the CPU_PACE points (asm2nasm.py):
  * each call takes ns from a virtual CPU clock and busy-waits until real time
  * catches up, so consecutive calls run at the original rate. After a pause
- * longer than PACE_RESYNC_NS the clock restarts from now. */
+ * longer than PACE_RESYNC_NS the clock restarts from now. In the browser the
+ * game pauses between slices (a few ms) and the clock keeps going over them:
+ * the game then runs without waiting until the clock has caught up. */
+#ifdef __EMSCRIPTEN__
+#define PACE_RESYNC_NS 30000000ULL
+#else
 #define PACE_RESYNC_NS 1000000ULL
+#endif
+
+static uint64_t pace_next;
 
 void cpu_pace(uint32_t ns)
 {
-    static uint64_t next;
     uint64_t now = host_ns();
-    if (next + PACE_RESYNC_NS < now)
-        next = now;
-    next += ns;
-    while (host_ns() < next)
+    if (pace_next + PACE_RESYNC_NS < now)
+        pace_next = now;
+    pace_next += ns;
+    while (host_ns() < pace_next)
         ;
+}
+
+/* Time stamp of a speaker change: while the paced loops run, their virtual
+ * clock, so the software-toggled tones keep their exact spacing even where
+ * the host clock is coarse (browsers round it to 0.1-1 ms). */
+static uint64_t sound_ns(void)
+{
+    uint64_t now = host_ns();
+    return pace_next + PACE_RESYNC_NS >= now ? pace_next : now;
 }
 
 _Noreturn void game_trap(uint32_t cs_offset)
