@@ -17,7 +17,7 @@ A recompilation of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)
 
 | Platform | Latest release | Package to choose |
 |---|---|---|
-| Web | [1.3](https://petarov.github.io/alleycat.exe/) | Play in your browser |
+| [Web](https://petarov.github.io/alleycat.exe/) | [1.3](https://petarov.github.io/alleycat.exe/) | Play in your browser |
 | Windows x64 | [1.3](https://github.com/petarov/alleycat.exe/releases/latest) | `windows-x86_64` ZIP |
 | Linux x64 | [1.3](https://github.com/petarov/alleycat.exe/releases/latest) | `linux-x86_64` archive |
 | macOS Intel (x64) | [1.3](https://github.com/petarov/alleycat.exe/releases/latest) | `macos-x86_64` ZIP |
