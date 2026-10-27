@@ -11,6 +11,6 @@
   "approach": "Static translation of the 8088 code to native ARM64 through C (Apple Silicon), x86-64 NASM (other desktop targets), and C/WebAssembly (browser), emulated PC hardware, SDL2 front end",
   "maintainers": [{"name": "petarov", "link": "https://github.com/petarov"}, {"name": "RetroShopPT", "link": "https://github.com/RetroShopPT"}],
   "links": [{"label": "Apple Silicon releases", "url": "https://github.com/RetroShopPT/alleycat.exe/releases"}, {"label": "Play in browser", "url": "https://petarov.github.io/alleycat.exe/"}],
-  "notes": "Apple Silicon fork of petarov/alleycat.exe; original history, licence and credits preserved. Native ARM64 build and packaging by RetroShopPT. Builds need the original CAT.EXE, which is not included in source control. The upstream port is largely LLM-generated.",
+  "notes": "Apple Silicon fork of petarov/alleycat.exe; original history, licence and credits preserved. Native ARM64 build and packaging by RetroShopPT. Builds need the original CAT.EXE, which is not included in source control. The public ARM64 app also requires the user to import CAT.EXE on first launch; original game data is not bundled. The upstream port is largely LLM-generated.",
   "tags": ["ARM64", "Apple Silicon", "x86-64", "8088", "CGA", "SDL2", "Atari", "WebAssembly", "Wasm"]
 }
