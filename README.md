@@ -1,4 +1,4 @@
-# Alley Cat — Apple Silicon / x86-64 recomp
+# Alley Cat — Apple Silicon (ARM64)
 
 [![version](https://img.shields.io/badge/release-1.3.1--arm64-orange)](https://github.com/RetroShopPT/alleycat.exe/releases/latest)
 [![platforms-windows-mac-linux](https://img.shields.io/badge/platforms-windows,%20mac,%20linux-blue)](https://github.com/petarov/alleycat.exe/releases/latest)
