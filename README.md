@@ -1,6 +1,6 @@
 # Alley Cat — Apple Silicon (ARM64)
 
-[![version](https://img.shields.io/badge/release-1.3.2--arm64-orange)](https://github.com/RetroShopPT/alleycat.exe/releases/latest)
+[![version](https://img.shields.io/badge/release-1.3.3--arm64-orange)](https://github.com/RetroShopPT/alleycat.exe/releases/latest)
 [![platforms-windows-mac-linux](https://img.shields.io/badge/platforms-windows,%20mac,%20linux-blue)](https://github.com/petarov/alleycat.exe/releases/latest)
 [![license-unlicense](https://img.shields.io/badge/license-Unlicense-green)](https://github.com/petarov/alleycat.exe/blob/main/LICENSE)
 
@@ -23,13 +23,13 @@ Based on [petarov/alleycat.exe](https://github.com/petarov/alleycat.exe), versio
 | Windows x64 | [1.3](https://github.com/petarov/alleycat.exe/releases/latest) | `windows-x86_64` ZIP |
 | Linux x64 | [1.3](https://github.com/petarov/alleycat.exe/releases/latest) | `linux-x86_64` archive |
 | macOS Intel (x64) | [1.3](https://github.com/petarov/alleycat.exe/releases/latest) | `macos-x86_64` ZIP |
-| macOS Apple Silicon (ARM64) | [ARM64 releases](https://github.com/RetroShopPT/alleycat.exe/releases) | `alleycat-1.3.2-macos-arm64.zip` — native app, no Rosetta |
+| macOS Apple Silicon (ARM64) | [ARM64 releases](https://github.com/RetroShopPT/alleycat.exe/releases) | `alleycat-1.3.3-macos-arm64.zip` — native app, no Rosetta |
 
 The macOS build is not signed or notarized: allow it under *Privacy & Security* or run `xattr -dr com.apple.quarantine <folder>`.
 
 ## Apple Silicon variant
 
-The public ARM64 app includes SDL2 and the translated game logic, **without the original CAT.EXE or its game data segment**. Unzip it and open **Alley Cat.app**. On first launch, choose your supported original DOS `CAT.EXE` (55,067 bytes). The app verifies the file and saves a copy in `~/Library/Application Support/RetroShopPT/Alley Cat/`; subsequent launches use that copy automatically. Cancelling quits normally; unsupported files are rejected. No Rosetta or DOSBox is required. The release uses a local ad-hoc signature and is not Apple-notarized.
+The public ARM64 app includes SDL2 and the translated game logic, **without the original CAT.EXE or its game data segment**. Unzip it and open **Alley Cat.app**. On first launch, choose your supported original DOS `CAT.EXE` (55,067 bytes). The app verifies the file and saves a copy in `~/Library/Application Support/Alley Cat/`; subsequent launches use that copy automatically. Copies imported by earlier releases in `~/Library/Application Support/RetroShopPT/Alley Cat/` are recognised and copied to the new folder automatically; the old copy is preserved. Cancelling quits normally; unsupported files are rejected. No Rosetta or DOSBox is required. The release uses a local ad-hoc signature and is not Apple-notarized.
 
 To build from source, supply your own supported `CAT.EXE`, install the universal SDL2 framework and follow [the Apple Silicon build instructions](BUILDING.md#native-apple-silicon-arm64). Generated listings, generated game C, game executables and app bundles are excluded from source control.
 
