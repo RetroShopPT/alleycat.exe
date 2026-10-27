@@ -1,5 +1,34 @@
 # Building Alley Cat (port)
 
+## Native Apple Silicon (ARM64)
+
+This fork adds a C-backend build for macOS ARM64. It does not require NASM, Rosetta, Ghidra or a pre-existing Intel executable. The original build targets below remain available.
+
+Requirements: Xcode command line tools, Python 3, and the official universal SDL2 2.32.x framework in `port/third_party/SDL2.framework`. Supply your own original DOS `CAT.EXE` in the repository root (55,067 bytes; SHA-256 `4979c8867826e08881d1d4bec95c95d6bc1ac70fd21050ccdb4f733a50d7bfdd`). Other versions fail validation before conversion.
+
+From the repository root:
+
+```sh
+python3 -m venv port/build/arm64-venv
+port/build/arm64-venv/bin/pip install -r port/requirements-arm64.txt
+cd port
+make -f Makefile.arm64 PYTHON=build/arm64-venv/bin/python3 all check smoke gameplay app
+```
+
+Outputs are in `port/build/macos-arm64/`: `alleycat`, headless test programs and **Alley Cat.app**. The app embeds the game data and includes SDL2, so it needs no external game file or Homebrew libraries on the target Mac. Its signature is ad-hoc, not Apple notarization. The optional packager `--icon` argument accepts a locally supplied `.icns`; no proprietary game artwork is added to source control.
+
+`MACOS_MIN` defaults to `11.0`; use `MACOS_MIN=27.0` if building specifically for macOS 27. Native execution and packaging were tested on M1 Pro/macOS 27.2. Older macOS versions have not been physically tested. `make arm64`, `make arm64-check` and `make arm64-app` are convenience entry points in the original Makefile; set `PYTHON` to the same virtual-environment interpreter.
+
+The build uses `tools/dos2listing.py` with Capstone 5.0.9 to follow reachable 8086 instructions, explicitly seed the interrupt/helper entries and read the eight room-dispatch targets. It applies the DOS relocation table at load segment 1000h before decoding. The existing `asm2c.py` then translates the listing into C; hardware, flags, timing, input and sound use the upstream portable runtime. The supported executable produces 8,331 translated instructions and zero unsupported-instruction traps. The generated listing and C include original game material and must remain outside source control.
+
+Tests:
+
+- `check`: runs the generated title drawing and six blits with a fixed random seed, then compares all 16,384 framebuffer bytes with `tools/ref_title.py`.
+- `smoke`: runs the game without a window for 10 seconds (override `SMOKE_SECONDS`).
+- `gameplay`: sends keyboard scancodes through the title, Kitten selection and game start, then verifies cursor input changes the cat position while the game is alive.
+
+These are focused validation checks, not a complete playthrough or a sound-fidelity certification. This path leaves x86-64, Linux, Windows and web targets unchanged.
+
 ## Requirements
 
 All platforms:
