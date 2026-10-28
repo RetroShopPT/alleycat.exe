@@ -12,10 +12,10 @@ From the repository root:
 python3 -m venv port/build/arm64-venv
 port/build/arm64-venv/bin/pip install -r port/requirements-arm64.txt
 cd port
-make -f Makefile.arm64 PYTHON=build/arm64-venv/bin/python3 all check smoke gameplay import-check app
+make -f Makefile.arm64 PYTHON=build/arm64-venv/bin/python3 all check smoke gameplay import-check paths-check app
 ```
 
-Outputs are in `port/build/macos-arm64-external/`: `alleycat`, headless test programs and **Alley Cat.app**. The public app includes SDL2 and the translated game logic, but leaves the original data segment zero-initialized. It asks for the supported original `CAT.EXE` on first launch, checks its SHA-256, imports it into the current user’s Application Support folder, and loads its data segment before starting the game. No Homebrew libraries are needed on the target Mac. The app bundle stays unchanged after import. Its signature is ad-hoc, not Apple notarization. The optional packager `--icon` argument accepts a locally supplied `.icns`; no proprietary game artwork is added to source control.
+Outputs are in `port/build/macos-arm64-external/`: `alleycat`, headless test programs and **Alley Cat.app**. The public app includes SDL2 and the translated game logic, but leaves the original data segment zero-initialized. It asks for the supported original `CAT.EXE` on first launch, checks its SHA-256, imports it into the current user’s Application Support folder, and loads its data segment before starting the game. No Homebrew libraries are needed on the target Mac. The app bundle stays unchanged after import. Validated copies in the former `RetroShopPT/Alley Cat/` folder are migrated automatically to `Alley Cat/`, keeping the original copy. If migration cannot be saved, the app can still use the validated legacy copy without a new import. Its signature is ad-hoc, not Apple notarization. The optional packager `--icon` argument accepts a locally supplied `.icns`; no proprietary game artwork is added to source control.
 
 `MACOS_MIN` defaults to `11.0`; use `MACOS_MIN=27.0` if building specifically for macOS 27. Native execution and packaging were tested on M1 Pro/macOS 27.2. Older macOS versions have not been physically tested. `make arm64`, `make arm64-check` and `make arm64-app` are convenience entry points in the original Makefile; set `PYTHON` to the same virtual-environment interpreter.
 
@@ -28,7 +28,9 @@ Tests:
 - `gameplay`: sends keyboard scancodes through the title, Kitten selection and game start, then verifies cursor input changes the cat position while the game is alive.
 - `import-check`: accepts the correct original, rejects missing/truncated/corrupt files and confirms rejected imports leave game memory unchanged. The headless tests explicitly load the build-time CAT.EXE through a test-only object that is never linked into the app.
 
-For UI checks, `ALLEYCAT_DATA_DIR` can select a temporary import folder. Normal launches use `~/Library/Application Support/RetroShopPT/Alley Cat/`. The original DOS file is still required at build time to generate the translated game logic. The optional `--external-data` generator argument leaves legacy x86-64/web builds unchanged; the ARM64 build always enables it.
+`paths-check` verifies the new import folder, migration from the legacy folder, preservation of the original, current-folder preference, corrupt-copy rejection and fallback when migration cannot be saved.
+
+For UI checks, `ALLEYCAT_DATA_DIR` can select a temporary import folder. Normal launches use `~/Library/Application Support/Alley Cat/`. The original DOS file is still required at build time to generate the translated game logic. The optional `--external-data` generator argument leaves legacy x86-64/web builds unchanged; the ARM64 build always enables it.
 
 These are focused validation checks, not a complete playthrough or a sound-fidelity certification. This path leaves x86-64, Linux, Windows and web targets unchanged.
 

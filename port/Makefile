@@ -228,7 +228,7 @@ arm64:
 	$(MAKE) -f Makefile.arm64 all
 
 arm64-check:
-	$(MAKE) -f Makefile.arm64 check smoke gameplay
+	$(MAKE) -f Makefile.arm64 check smoke gameplay import-check paths-check
 
 arm64-app:
 	$(MAKE) -f Makefile.arm64 app

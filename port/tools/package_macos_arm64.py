@@ -13,7 +13,7 @@ def main():
     parser.add_argument("binary", type=Path)
     parser.add_argument("framework", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--version", default="1.3.2")
+    parser.add_argument("--version", default="1.3.3")
     parser.add_argument("--minimum-os", default="11.0")
     parser.add_argument("--icon", type=Path, help="Optional locally supplied .icns")
     args = parser.parse_args()
@@ -57,7 +57,7 @@ def main():
     (resources / "FIRST-RUN.txt").write_text(
         "This app does not include the original CAT.EXE or game data segment.\n"
         "On first launch, select your supported original DOS CAT.EXE (55,067 bytes).\n"
-        "It is stored in your Library/Application Support/RetroShopPT/Alley Cat folder.\n"
+        "It is stored in your Library/Application Support/Alley Cat folder.\n"
         "Original SHA-256: 4979c8867826e08881d1d4bec95c95d6bc1ac70fd21050ccdb4f733a50d7bfdd\n"
         "The app contains the translated game logic and the port runtime.\n")
     subprocess.run(["xattr", "-cr", str(args.output)], check=True)

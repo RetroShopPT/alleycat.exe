@@ -5,7 +5,7 @@ EXE ?= ../CAT.EXE
 PYTHON ?= python3
 SDL_DIR ?= third_party
 CC := clang
-VER := 1.3.2
+VER := 1.3.3
 MACOS_MIN ?= 11.0
 ICON ?=
 LISTING := $(BUILD)/CAT.asm
@@ -54,6 +54,12 @@ $(BUILD)/import_check: tests/game_data_main.c $(BUILD)/game_data.o
 import-check: $(BUILD)/import_check
 	./$(BUILD)/import_check '$(EXE)'
 
+$(BUILD)/paths_check: tests/game_data_paths_main.m $(BUILD)/game_data.o $(BUILD)/game_data_macos.o
+	$(CC) $(CFLAGS) -fobjc-arc $^ $(LDFLAGS) -o $@
+
+paths-check: $(BUILD)/paths_check
+	./$(BUILD)/paths_check '$(EXE)'
+
 $(BUILD)/alleycat: $(BUILD)/platform.o $(BUILD)/game_data_macos.o $(GAME_OBJS)
 	$(CC) $^ $(LDFLAGS) -o $@
 
@@ -81,4 +87,4 @@ gameplay: $(BUILD)/gameplay
 app: $(BUILD)/alleycat
 	$(PYTHON) tools/package_macos_arm64.py $(BUILD)/alleycat $(SDL_DIR)/SDL2.framework '$(BUILD)/Alley Cat.app' --version $(VER) --minimum-os $(MACOS_MIN) $(if $(ICON),--icon "$(ICON)")
 
-.PHONY: all check smoke gameplay import-check app
+.PHONY: all check smoke gameplay import-check paths-check app
