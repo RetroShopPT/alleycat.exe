@@ -2,7 +2,7 @@
 
 ## Native Apple Silicon (ARM64)
 
-This fork adds a C-backend build for macOS ARM64. It does not require NASM, Rosetta, Ghidra or a pre-existing Intel executable. The original build targets below remain available.
+A C-backend build is available for macOS ARM64. It does not require NASM, Rosetta, Ghidra or a pre-existing Intel executable. The original build targets below remain available.
 
 Requirements: Xcode command line tools, Python 3, and the official universal SDL2 2.32.x framework in `port/third_party/SDL2.framework`. Supply your own original DOS `CAT.EXE` in the repository root (55,067 bytes; SHA-256 `4979c8867826e08881d1d4bec95c95d6bc1ac70fd21050ccdb4f733a50d7bfdd`). Other versions fail validation before conversion.
 
@@ -15,7 +15,7 @@ cd port
 make -f Makefile.arm64 PYTHON=build/arm64-venv/bin/python3 all check smoke gameplay import-check paths-check app
 ```
 
-Outputs are in `port/build/macos-arm64-external/`: `alleycat`, headless test programs and **Alley Cat.app**. The public app includes SDL2 and the translated game logic, but leaves the original data segment zero-initialized. It asks for the supported original `CAT.EXE` on first launch, checks its SHA-256, imports it into the current user’s Application Support folder, and loads its data segment before starting the game. No Homebrew libraries are needed on the target Mac. The app bundle stays unchanged after import. Validated copies in the former `RetroShopPT/Alley Cat/` folder are migrated automatically to `Alley Cat/`, keeping the original copy. If migration cannot be saved, the app can still use the validated legacy copy without a new import. Its signature is ad-hoc, not Apple notarization. The optional packager `--icon` argument accepts a locally supplied `.icns`; no proprietary game artwork is added to source control.
+Outputs are in `port/build/macos-arm64-external/`: `alleycat`, headless test programs and **Alley Cat.app**. The ARM64 app includes SDL2 and the translated game logic, but leaves the original data segment zero-initialized. It asks for the supported original `CAT.EXE` on first launch, checks its SHA-256, imports it into the current user’s Application Support folder, and loads its data segment before starting the game. No Homebrew libraries are needed on the target Mac. The app bundle stays unchanged after import. Validated copies in the former `RetroShopPT/Alley Cat/` folder are migrated automatically to `Alley Cat/`, keeping the original copy. If migration cannot be saved, the app can still use the validated legacy copy without a new import. Its signature is ad-hoc, not Apple notarization. The optional packager `--icon` argument accepts a locally supplied `.icns`; no proprietary game artwork is added to source control.
 
 `MACOS_MIN` defaults to `11.0`; use `MACOS_MIN=27.0` if building specifically for macOS 27. Native execution and packaging were tested on M1 Pro/macOS 27.2. Older macOS versions have not been physically tested. `make arm64`, `make arm64-check` and `make arm64-app` are convenience entry points in the original Makefile; set `PYTHON` to the same virtual-environment interpreter.
 
@@ -36,7 +36,7 @@ These are focused validation checks, not a complete playthrough or a sound-fidel
 
 ## Requirements
 
-All platforms:
+Original x86-64 and web build paths (the ARM64 path above uses a runtime data import):
 
 - The game was written in hand-coded 8088 assembly. This project disassembles `CAT.EXE`, translates the 16-bit code into x86-64 assembly, and runs it on emulated PC hardware with SDL2 handling video and sound.
 - The original `CAT.EXE`, in the repository root. The build reads the game data directly from it, and every binary embeds it, so no game files are needed at run time. `CAT.EXE` and the disassembly derived from it are copyrighted by their original owners.

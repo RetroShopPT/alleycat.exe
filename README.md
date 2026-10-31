@@ -1,12 +1,10 @@
-# Alley Cat — Apple Silicon (ARM64)
+# Alley Cat (x86-64 recomp)
 
-[![version](https://img.shields.io/badge/release-1.3.3--arm64-orange)](https://github.com/RetroShopPT/alleycat.exe/releases/latest)
+[![version](https://img.shields.io/badge/release-1.3-orange)](https://github.com/petarov/alleycat.exe/releases/latest)
 [![platforms-windows-mac-linux](https://img.shields.io/badge/platforms-windows,%20mac,%20linux-blue)](https://github.com/petarov/alleycat.exe/releases/latest)
 [![license-unlicense](https://img.shields.io/badge/license-Unlicense-green)](https://github.com/petarov/alleycat.exe/blob/main/LICENSE)
 
-A recompilation of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)) (Bill Williams, SynSoft/IBM, 1984) from its original DOS executable. This fork adds a **native macOS Apple Silicon (ARM64)** build using the portable C backend; the original x86-64 and web backends are retained.
-
-Based on [petarov/alleycat.exe](https://github.com/petarov/alleycat.exe), version 1.3. Original game by **Bill Williams**, SynSoft/IBM (1984). Apple Silicon build integration and packaging are maintained in this fork.
+A recompilation of [Alley Cat](https://wikipedia.org/wiki/Alley_Cat_(video_game)) (Bill Williams, SynSoft/IBM, 1984) from its original DOS executable for `x86_64` platforms.
 
 > [!IMPORTANT]
 > About 99% of the code is LLM-generated and only roughly reviewed. If you have concerns about AI-generated code, avoid this project.
@@ -23,13 +21,14 @@ Based on [petarov/alleycat.exe](https://github.com/petarov/alleycat.exe), versio
 | Windows x64 | [1.3](https://github.com/petarov/alleycat.exe/releases/latest) | `windows-x86_64` ZIP |
 | Linux x64 | [1.3](https://github.com/petarov/alleycat.exe/releases/latest) | `linux-x86_64` archive |
 | macOS Intel (x64) | [1.3](https://github.com/petarov/alleycat.exe/releases/latest) | `macos-x86_64` ZIP |
-| macOS Apple Silicon (ARM64) | [ARM64 releases](https://github.com/RetroShopPT/alleycat.exe/releases) | `alleycat-1.3.3-macos-arm64.zip` — native app, no Rosetta |
+| macOS Apple Silicon (ARM64) | [1.3](https://github.com/petarov/alleycat.exe/releases/latest) | `macos-x86_64` ZIP — runs under Rosetta 2 |
 
 The macOS build is not signed or notarized: allow it under *Privacy & Security* or run `xattr -dr com.apple.quarantine <folder>`.
 
-## Apple Silicon variant
+## Native Apple Silicon (ARM64)
 
-The public ARM64 app includes SDL2 and the translated game logic, **without the original CAT.EXE or its game data segment**. Unzip it and open **Alley Cat.app**. On first launch, choose your supported original DOS `CAT.EXE` (55,067 bytes). The app verifies the file and saves a copy in `~/Library/Application Support/Alley Cat/`; subsequent launches use that copy automatically. Copies imported by earlier releases in `~/Library/Application Support/RetroShopPT/Alley Cat/` are recognised and copied to the new folder automatically; the old copy is preserved. Cancelling quits normally; unsupported files are rejected. No Rosetta or DOSBox is required. The release uses a local ad-hoc signature and is not Apple-notarized.
+
+The ARM64 app includes SDL2 and the translated game logic, **without the original CAT.EXE or its game data segment**. Build it using the instructions below and open **Alley Cat.app**. On first launch, choose your supported original DOS `CAT.EXE` (55,067 bytes). The app verifies the file and saves a copy in `~/Library/Application Support/Alley Cat/`; subsequent launches use that copy automatically. Copies imported by earlier releases in `~/Library/Application Support/RetroShopPT/Alley Cat/` are recognised and copied to the new folder automatically; the old copy is preserved. Cancelling quits normally; unsupported files are rejected. No Rosetta or DOSBox is required. The app packager uses a local ad-hoc signature and is not Apple-notarized.
 
 To build from source, supply your own supported `CAT.EXE`, install the universal SDL2 framework and follow [the Apple Silicon build instructions](BUILDING.md#native-apple-silicon-arm64). Generated listings, generated game C, game executables and app bundles are excluded from source control.
 
@@ -59,9 +58,6 @@ Validation on an M1 Pro with macOS 27.2: the title framebuffer matches the indep
 
 See [BUILDING.md](BUILDING.md) for requirements, build steps, the source layout and how the port works.
 
-## License and attribution
-
-This is a fork of petarov’s port; its history, credits and original LICENSE are preserved. The port source uses the Unlicense. **The original Alley Cat game and its data remain the property of their original rights holders; the port licence does not relicense those assets.** SDL2 retains its own licence, included in the bundled framework.
-
+## License
 
 [Unlicense](LICENSE)
